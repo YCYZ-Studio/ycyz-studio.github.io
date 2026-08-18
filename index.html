@@ -184,7 +184,7 @@ svg{flex-shrink:0}
 
 /* ===== Project Board（项目板块：按项目排列） ===== */
 .project-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.pboard-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);padding:14px;cursor:pointer;transition:all .15s;border-top:3px solid var(--primary)}
+.pboard-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:all .15s;border-top:3px solid var(--primary)}
 .pboard-card:hover{box-shadow:var(--shadow-l);transform:translateY(-1px)}
 .pboard-card .pb-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
 .pboard-card .pb-title{font-size:14px;font-weight:600;line-height:1.4}
@@ -607,14 +607,7 @@ applicants:[
 templates:[
 '创意提交表','立项申请表','人员申请表','项目排期表','拍摄通知','素材交接表','初剪审核表','发布检查表','项目复盘表','设备借用表','换届交接清单'
 ],
-checkins:(function(){
-/* 打卡记录：从真实使用开始累积 */
-var d=new Date();
-var pad=function(n){return n<10?'0'+n:''+n;};
-var ds=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-var tp=function(h,m){return pad(h)+':'+pad(m);};
-return [];
-})(),
+checkins:[],
 meetings:[
 {id:1,name:'电视台周例会',date:'每周一',time:'17:30',host:'陈奕多',note:'全体成员参加'},
 {id:2,name:'选题会',date:'每周五',time:'17:00',host:'陈奕多',note:'创意提案与立项讨论'}
@@ -639,6 +632,7 @@ function isValidData(d){
   if(!Array.isArray(d.projects)||!Array.isArray(d.members))return false;
   if(!Array.isArray(d.creatives)||!Array.isArray(d.equipment)||!Array.isArray(d.alerts))return false;
   if(!Array.isArray(d.templates))return false;
+  if(!Array.isArray(d.departments))return false;
   if(d.checkins!==undefined&&!Array.isArray(d.checkins))return false;
   if(d.meetings!==undefined&&!Array.isArray(d.meetings))return false;
   if(d.annualPlans!==undefined&&!Array.isArray(d.annualPlans))return false;
@@ -646,17 +640,46 @@ function isValidData(d){
   if(!d.recruitment||!d.recruitment.funnel||typeof d.recruitment.funnel!=='object'||!Array.isArray(d.recruitment.applicants))return false;
   return true;
 }
-/* 合并导入数据：以 DEMO_DATA 为底补全缺失字段，防止缺字段崩溃 */
+/* 合并导入数据：以 DEMO_DATA 为底补全缺失字段（含实体字段级），防止缺字段崩溃 */
 function mergeData(parsed){
   var base=JSON.parse(JSON.stringify(DEMO_DATA));
   var out={};
   for(var k in base){out[k]=JSON.parse(JSON.stringify(base[k]));}
-  for(var k2 in base){if(parsed[k2]!==undefined)out[k2]=JSON.parse(JSON.stringify(parsed[k2]));}
+  for(var k2 in base){
+    var v=parsed[k2];
+    if(v===undefined||v===null)continue;
+    if(Array.isArray(base[k2])&&!Array.isArray(v))continue; /* 类型不符：保留 base */
+    if(typeof base[k2]==='object'&&base[k2]!==null&&!Array.isArray(base[k2])&&(typeof v!=='object'||v===null||Array.isArray(v)))continue;
+    out[k2]=JSON.parse(JSON.stringify(v));
+  }
+  /* 实体字段级补全：项目补 crew/tasks/level/status 等，成员补 subSkills 等 */
+  var sampleP=base.projects[0]||{};
+  out.projects=(out.projects||[]).map(function(p){
+    for(var f in sampleP){if(p[f]===undefined)p[f]=JSON.parse(JSON.stringify(sampleP[f]));}
+    if(!Array.isArray(p.crew))p.crew=[];
+    if(!Array.isArray(p.tasks))p.tasks=[];
+    if(typeof p.id!=='number'||isNaN(p.id))p.id=0;
+    return p;
+  });
+  var sampleM=base.members[0]||{};
+  out.members=(out.members||[]).map(function(m){
+    for(var f2 in sampleM){if(m[f2]===undefined)m[f2]=JSON.parse(JSON.stringify(sampleM[f2]));}
+    if(!Array.isArray(m.subSkills))m.subSkills=[];
+    if(!Array.isArray(m.trainings))m.trainings=[];
+    if(!Array.isArray(m['履历']))m['履历']=[];
+    if(typeof m.id!=='number'||isNaN(m.id))m.id=0;
+    return m;
+  });
+  out.checkins=out.checkins||[];
+  out.meetings=out.meetings||[];
+  out.annualPlans=out.annualPlans||[];
+  out.logs=out.logs||[];
   return out;
 }
 
 function saveData(){
   if(!STORAGE_OK){if(!_saveFailShown){_saveFailShown=true;showToast('浏览器存储不可用，本次修改仅保留在当前页面');}return;}
+  if(DATA.version!==DATA_VERSION)DATA.version=DATA_VERSION;
   var json;
   try{json=JSON.stringify(DATA);}catch(e){showToast('保存失败：数据格式异常');return;}
   try{
@@ -668,6 +691,7 @@ function saveData(){
     catch(e3){showToast('保存失败：浏览器存储空间不足');}
   }
   /* 云端同步：防抖推送 */
+  try{localStorage.setItem('wb_data_updated',String(Date.now()));}catch(e){}
   if(cloudEnabled())cloudPush();
 }
 
@@ -679,7 +703,7 @@ function loadData(){
   if(!parsed||!isValidData(parsed)){
     var restored=false;
     try{var bak=localStorage.getItem(LS_BACKUP_KEY);if(bak){var p2=JSON.parse(bak);if(isValidData(p2)){parsed=p2;restored=true;}}}catch(e2){}
-    if(restored){showToast('检测到数据异常，已从自动备份恢复');}
+    if(restored){showToast('检测到数据异常，已从自动备份恢复');/* 恢复成功后回写主 key，避免每次刷新重复走恢复 */try{localStorage.setItem(LS_KEY,bak);}catch(e3){}}
     else{parsed=null;}
   }
   if(parsed&&isValidData(parsed)){
@@ -688,9 +712,15 @@ function loadData(){
   }
 }
 
-/* 数据迁移：旧版打卡格式（type:'in'/'out'）→ 新版项目/会议打卡格式 */
+/* 数据迁移：按 DATA_VERSION 逐版本升级 + 旧版打卡格式迁移 */
 function migrateData(){
   var changed=false;
+  /* 版本字段：旧数据无 version → 视为 0，逐步升级 */
+  if(typeof DATA.version!=='number'||DATA.version<DATA_VERSION){
+    if(DATA.version===undefined||DATA.version<3){DATA.version=3;changed=true;}
+    DATA.version=DATA_VERSION;
+    changed=true;
+  }
   if(!Array.isArray(DATA.checkins)){DATA.checkins=[];changed=true;}
   DATA.checkins.forEach(function(c){
     if(c&&c.type&&!c.kind){
@@ -705,6 +735,9 @@ function migrateData(){
   });
   if(!Array.isArray(DATA.meetings)){DATA.meetings=[];changed=true;}
   if(!Array.isArray(DATA.annualPlans)){DATA.annualPlans=[];changed=true;}
+  if(!Array.isArray(DATA.logs)){DATA.logs=[];changed=true;}
+  /* checkins 上限保护（10 年量级） */
+  if(DATA.checkins.length>5000){DATA.checkins=DATA.checkins.slice(-5000);changed=true;}
   if(changed)saveData();
 }
 
@@ -721,6 +754,7 @@ var creativeFilter='all';
 var taskFormFor=null;
 var crewFormFor=null;
 var searchQuery='';
+var _submitting=false;
 var recruitStageFilter='';
 var calendarView='week';
 var calendarMonthOffset=0;
@@ -736,6 +770,18 @@ var lastExport=null;
 /* ===== Utils ===== */
 function isAdmin(){return userMode==='admin';}
 function esc(s){if(!s)return '';return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+/* 统一日期解析：支持 YYYY-MM-DD / YYYY-M-D，非法返回 null */
+function parseDateStr(s){
+if(typeof s!=='string')return null;
+var m=s.split('-');
+if(m.length!==3)return null;
+var y=Number(m[0]),mo=Number(m[1]),d=Number(m[2]);
+if(isNaN(y)||isNaN(mo)||isNaN(d)||mo<1||mo>12||d<1||d>31)return null;
+var dt=new Date(y,mo-1,d);
+if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;
+return dt;
+}
+function fmtDate(dt){if(!dt)return'';var p=function(n){return n<10?'0'+n:''+n;};return dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate());}
 
 /* ===== 操作日志（记录在案） ===== */
 function logAction(action,detail){
@@ -746,7 +792,7 @@ var pad=function(n){return n<10?'0'+n:''+n;};
 var ts=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
 var adminMember=(DATA.members||[]).find(function(m){return m.isAdmin;});
 var who=isAdmin()?(adminMember?adminMember.name:'管理员'):'成员';
-DATA.logs.push({id:(DATA.logs.reduce(function(a,l){return Math.max(a,l.id);},0)+1),time:ts,who:who,action:action,detail:detail||''});
+DATA.logs.push({id:(DATA.logs.reduce(function(a,l){return Math.max(a,l.id||0);},0)+1),time:ts,who:who,action:action,detail:detail||''});
 if(DATA.logs.length>500)DATA.logs=DATA.logs.slice(-500);
 saveData();
 }catch(e){}
@@ -820,13 +866,21 @@ if(res&&res.data&&res.data.json){
 try{
 var parsed=JSON.parse(res.data.json);
 if(parsed&&isValidData(parsed)){
+/* 时间戳保护：云端比本地旧则不覆盖（防多端回滚） */
+var cloudUpdated=Number(res.data.updated)||0;
+var localUpdated=Number(localStorage.getItem('wb_data_updated'))||0;
+if(cloudUpdated>0&&localUpdated>0&&cloudUpdated<localUpdated){cloudStatus='synced';renderCloudBadge();return;}
 DATA=mergeData(parsed);
-try{localStorage.setItem(LS_KEY,JSON.stringify(DATA));}catch(e){}
+migrateData();
+try{
+localStorage.setItem(LS_KEY,JSON.stringify(DATA));
+if(cloudUpdated>0)localStorage.setItem('wb_data_updated',String(cloudUpdated));
+}catch(e){}
 cloudStatus='synced';renderCloudBadge();
 try{renderPage(currentPage);}catch(e){}
 showToast('已同步云端数据');
 }
-}catch(e){}
+}catch(e){cloudStatus='error';renderCloudBadge();}
 }
 }).catch(function(e){cloudStatus='error';renderCloudBadge();console.warn('拉取云端失败',e);});
 }
@@ -852,11 +906,11 @@ b.style.color=m.c;
 var env=cloudEnabled();
 b.title=env?('环境: '+env):'未配置云端 · 点击设置';
 }
-function statusBadge(s){var c=ST[s]||{cls:'st-gray'};return '<span class="badge '+c.cls+'"><span class="dot"></span>'+s+'</span>';}
-function levelBadge(l){var c=LEVEL[l]||LEVEL['小型'];return '<span class="badge '+c.cls+'">'+l+'</span>';}
-function deptBadge(d){if(!d)return '<span class="badge st-gray">无部门</span>';var c=DEPT_COLOR[d]||'#64748b';return '<span class="badge" style="background:'+c+'22;color:'+c+'">'+d+'</span>';}
-function memberTypeBadge(t){var c=TYPE_CLS[t]||TYPE_CLS['核心'];return '<span class="badge '+c.cls+'">'+c.label+'</span>';}
-function memberStatusBadge(s){var c=MEMBER_STATUS[s]||{cls:'st-gray'};return '<span class="badge '+c.cls+'"><span class="dot"></span>'+s+'</span>';}
+function statusBadge(s){var c=ST[s]||{cls:'st-gray'};return '<span class="badge '+c.cls+'"><span class="dot"></span>'+esc(s)+'</span>';}
+function levelBadge(l){var c=LEVEL[l]||LEVEL['小型'];return '<span class="badge '+c.cls+'">'+esc(l)+'</span>';}
+function deptBadge(d){if(!d)return '<span class="badge st-gray">无部门</span>';var c=DEPT_COLOR[d]||'#64748b';return '<span class="badge" style="background:'+c+'22;color:'+c+'">'+esc(d)+'</span>';}
+function memberTypeBadge(t){var c=TYPE_CLS[t]||TYPE_CLS['核心'];return '<span class="badge '+c.cls+'">'+esc(c.label)+'</span>';}
+function memberStatusBadge(s){var c=MEMBER_STATUS[s]||{cls:'st-gray'};return '<span class="badge '+c.cls+'"><span class="dot"></span>'+esc(s)+'</span>';}
 function avatarColor(dept){if(!dept)return '#2563eb';return DEPT_COLOR[dept]||'#64748b';}
 function initials(name){return name?name.charAt(0):'?';}
 function showToast(msg){var t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(function(){t.classList.remove('show');},2500);}
@@ -979,6 +1033,10 @@ creatives:[],
 projects:[],
 equipment:[],
 alerts:[],
+checkins:[],
+meetings:[],
+annualPlans:[],
+logs:[],
 recruitment:{funnel:{initial:0,retest:0,trial:0,accepted:0},applicants:[]},
 templates:JSON.parse(JSON.stringify(DEMO_DATA.templates))
 };
@@ -997,19 +1055,22 @@ showToast('已恢复演示数据');
 };
 
 window.submitCreative=function(){
+if(_submitting)return;
 var title=document.getElementById('c-title').value.trim();
 if(!title){showToast('请填写项目名称');return;}
+_submitting=true;
 var src=document.getElementById('c-source').value;
 var d=new Date();
 var pad=function(n){return n<10?'0'+n:''+n;};
 var created=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-var maxId=DATA.creatives.reduce(function(m,c){return Math.max(m,c.id);},0);
+var maxId=DATA.creatives.reduce(function(m,c){return Math.max(m,c.id||0);},0);
+var who=(function(){var a=(DATA.members||[]).find(function(x){return x.isAdmin;});return a?a.name:(isAdmin()?'管理员':'成员');})();
 DATA.creatives.push({
 id:maxId+1,
 title:title,
 source:src,
-submitter:'陈思远',
-contact:'陈思远',
+submitter:who,
+contact:who,
 coreIdea:document.getElementById('c-idea').value.trim()||'-',
 target:document.getElementById('c-target').value.trim()||'-',
 refs:parseInt(document.getElementById('c-refs').value,10)||0,
@@ -1019,17 +1080,20 @@ created:created
 saveData();
 closeModal();
 renderPage('creative');
+setTimeout(function(){_submitting=false;},400);
 showToast('创意已提交，等待整理');
 };
 
 window.submitProject=function(){
+if(_submitting)return;
 var title=document.getElementById('p-title').value.trim();
 if(!title){showToast('请填写项目名称');return;}
+_submitting=true;
 var levelMap={'小型（3人）':'小型','标准（5-7人）':'标准','重点（8-12人）':'重点'};
 var level=levelMap[document.getElementById('p-level').value]||'标准';
 var platformRaw=document.getElementById('p-platform').value;
 var platform=platformRaw==='抖音 + 哔哩哔哩'?'哔哩哔哩+抖音':platformRaw;
-var maxId=DATA.projects.reduce(function(m,p){return Math.max(m,p.id);},0);
+var maxId=DATA.projects.reduce(function(m,p){return Math.max(m,p.id||0);},0);
 DATA.projects.push({
 id:maxId+1,
 title:title,
@@ -1051,6 +1115,7 @@ tasks:[]
 saveData();
 closeModal();
 renderPage('projects');
+setTimeout(function(){_submitting=false;},400);
 showToast('立项申请已提交，等待台长审核');
 };
 
@@ -1132,11 +1197,13 @@ modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
 };
 window.saveNewMember=function(){
+if(_submitting)return;
 var name=document.getElementById('nm-name').value.trim();
 if(!name){showToast('请填写姓名');return;}
+_submitting=true;
 var deptRaw=document.getElementById('nm-dept').value;
 var dept=deptRaw==='无'?null:deptRaw;
-var maxId=DATA.members.reduce(function(m,x){return Math.max(m,x.id);},0);
+var maxId=DATA.members.reduce(function(m,x){return Math.max(m,x.id||0);},0);
 DATA.members.push({
 id:maxId+1,
 name:name,
@@ -1147,7 +1214,7 @@ role:document.getElementById('nm-role').value,
 type:document.getElementById('nm-type').value,
 mainSkill:document.getElementById('nm-mainSkill').value.trim()||'待定',
 subSkills:[],
-weeklyHours:parseInt(document.getElementById('nm-hours').value,10)||10,
+weeklyHours:Math.max(0,Math.min(168,parseInt(document.getElementById('nm-hours').value,10)||10)),
 status:'空闲',
 currentProjects:0,
 canProduce:false,
@@ -1164,6 +1231,7 @@ saveData();
 logAction('新增成员',name+'（'+(dept||'台长/管理')+' · '+(document.getElementById('nm-grade').value.trim()||'高二')+'）');
 closeModal();
 renderPage('members');
+setTimeout(function(){_submitting=false;},400);
 showToast('成员已添加');
 };
 
@@ -1188,7 +1256,7 @@ html+='<label style="display:flex;align-items:center;gap:6px;font-size:13px"><in
 html+='</div>';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">部长评价</label><textarea id="m-eval" style="min-height:80px;resize:vertical">'+esc(m.评价||'')+'</textarea></div>';
 html+='</div>';
-html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="openMember('+id+')">取消</button><button class="btn btn-primary" onclick="saveMemberEdit('+id+')">保存</button></div>';
+html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveMemberEdit('+id+')">保存</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
 };
@@ -1199,8 +1267,8 @@ m.status=document.getElementById('m-status').value;
 m.mainSkill=document.getElementById('m-mainSkill').value.trim();
 var sub=document.getElementById('m-subSkills').value.split(',');
 m.subSkills=sub.map(function(s){return s.trim();}).filter(function(s){return s!=='';});
-m.weeklyHours=parseInt(document.getElementById('m-weeklyHours').value,10)||0;
-m.currentProjects=parseInt(document.getElementById('m-currentProjects').value,10)||0;
+m.weeklyHours=Math.max(0,Math.min(168,parseInt(document.getElementById('m-weeklyHours').value,10)||0));
+m.currentProjects=Math.max(0,Math.min(20,parseInt(document.getElementById('m-currentProjects').value,10)||0));
 m.canProduce=document.getElementById('m-canProduce').checked;
 m.needMentor=document.getElementById('m-needMentor').checked;
 m.canFullShoot=document.getElementById('m-canFullShoot').checked;
@@ -1280,6 +1348,7 @@ var role=document.getElementById('crew-role').value.trim()||'成员';
 var m=DATA.members.find(function(x){return x.id===mid;});
 if(!m){showToast('请选择成员');return;}
 p.crew=p.crew||[];
+if(p.crew.some(function(cm){return cm.name===m.name;})){showToast(m.name+' 已在剧组中');return;}
 p.crew.push({name:m.name,role:role,dept:dept==='无'?null:dept});
 p.crewSize=p.crew.length;
 m.currentProjects=(m.currentProjects||0)+1;
@@ -1434,7 +1503,7 @@ var html='';
 items.forEach(function(it){
 if(it.id==='dispatch'&&!isAdmin())return;
 var active=it.id==='me'?false:currentPage===it.id;
-var onclick=it.id==='me'?'openMember(1)':'navigate(\''+it.id+'\')';
+var onclick=it.id==='me'?('openMember('+((DATA.members[0]&&DATA.members[0].id)||1)+')'):'navigate(\''+it.id+'\')';
 html+='<div class="mt-item'+(active?' active':'')+'" onclick="'+onclick+'">'+I[it.icon]+'<span>'+it.label+'</span></div>';
 });
 nav.innerHTML=html;
@@ -1475,9 +1544,10 @@ var archived=stepData[9].count;
 
 var html='';
 var today=todayStr();
-var tOverdue=DATA.projects.filter(function(p){return p.deadline&&p.deadline<today&&['已归档','已拒绝','已取消'].indexOf(p.status)<0;});
+var todayD=parseDateStr(today);
+var tOverdue=DATA.projects.filter(function(p){var pd=parseDateStr(p.deadline);return pd&&todayD&&pd<todayD&&['已归档','已拒绝','已取消'].indexOf(p.status)<0;});
 var tReview=DATA.projects.filter(function(p){return ['待立项审核','待初剪审核','待最终审核'].indexOf(p.status)>=0;});
-var tToday=DATA.projects.filter(function(p){return p.deadline===today;});
+var tToday=DATA.projects.filter(function(p){var pd=parseDateStr(p.deadline);return pd&&todayD&&fmtDate(pd)===today;});
 html+='<div class="card card-pad mb-12" style="background:var(--danger-l);border-left:3px solid var(--danger)">';
 html+='<div class="flex justify-between items-center mb-8"><span class="font-600" style="color:var(--danger)">今天要处理</span><span class="text-sm text-t2">'+today+'</span></div>';
 if(tOverdue.length===0&&tReview.length===0&&tToday.length===0){
@@ -1486,8 +1556,9 @@ html+='<div class="text-sm text-t2">今日无紧急待办</div>';
 if(tOverdue.length>0){
 html+='<div class="mb-8"><div class="text-sm font-600 mb-4" style="color:var(--danger)">逾期项</div>';
 tOverdue.forEach(function(p){
-var days=Math.floor((Date.parse(today)-Date.parse(p.deadline))/86400000);
-html+='<div class="alert-item" style="cursor:pointer" onclick="openProject('+p.id+')"><div class="alert-text">'+esc(p.title)+' · 截止 '+p.deadline+'</div><span class="badge st-red">已逾期'+days+'天</span></div>';
+var pd=parseDateStr(p.deadline);
+var days=pd&&todayD?Math.round((todayD-pd)/86400000):0;
+html+='<div class="alert-item" style="cursor:pointer" onclick="openProject('+p.id+')"><div class="alert-text">'+esc(p.title)+' · 截止 '+esc(p.deadline)+'</div><span class="badge st-red">已逾期'+days+'天</span></div>';
 });
 html+='</div>';
 }
@@ -1568,7 +1639,7 @@ html+='<div class="card card-pad" style="margin-top:12px"><div class="section-ti
 DATA.alerts.forEach(function(a){
 var color=a.type==='danger'?'var(--danger)':a.type==='warning'?'var(--warning)':'var(--primary)';
 var icon=a.type==='danger'?'<svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2"><path d="M12 9v4M12 17v.5M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>':'<svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16v.5"/></svg>';
-html+='<div class="alert-item">'+icon+'<div class="alert-text">'+a.text+'</div><span class="alert-action" onclick="navigate(\''+a.page+'\')">'+a.action+'</span></div>';
+html+='<div class="alert-item">'+icon+'<div class="alert-text">'+esc(a.text)+'</div><span class="alert-action" onclick="navigate(\''+a.page+'\')">'+a.action+'</span></div>';
 });
 html+='</div>';
 }
@@ -1594,12 +1665,12 @@ if(filteredCreative.length===0)html+='<div class="empty" style="grid-column:1/-1
 filteredCreative.forEach(function(c){
 var srcColor=c.source==='学校立项'?'st-blue':c.source==='自主立项'?'st-teal':'st-indigo';
 html+='<div class="card card-pad" style="cursor:pointer" onclick="openCreative('+c.id+')">';
-html+='<div class="flex justify-between items-center mb-8"><span class="badge '+srcColor+'">'+c.source+'</span>'+statusBadge(c.status)+'</div>';
+html+='<div class="flex justify-between items-center mb-8"><span class="badge '+srcColor+'">'+esc(c.source)+'</span>'+statusBadge(c.status)+'</div>';
 html+='<div class="font-bold mb-8" style="font-size:15px">'+esc(c.title)+'</div>';
 html+='<div class="text-sm text-t2 mb-8" style="line-height:1.5">'+esc(c.coreIdea)+'</div>';
 html+='<div class="text-sm text-t3 flex items-center gap-12" style="flex-wrap:wrap">';
 html+='<span>'+I.user+' '+esc(c.submitter)+'</span>';
-html+='<span>'+I.clock+' '+c.created+'</span>';
+html+='<span>'+I.clock+' '+esc(c.created)+'</span>';
 if(c.refs)html+='<span>参考视频 '+c.refs+' 个</span>';
 html+='</div></div>';
 });
@@ -1631,7 +1702,7 @@ h+='<span class="pb-person" style="background:var(--bg);color:var(--text2)">人�
 }
 h+='</div>';
 h+='<div class="pb-progress"><div class="progress-bar"><div class="fill" style="width:'+p.progress+'%;background:'+lvlC+'"></div></div><span class="text-sm" style="font-size:11px">'+p.progress+'%</span></div>';
-h+='<div class="pb-step">'+I.chevronR+' 当前节点：'+esc(WF_STEPS[(p.wfStep-1)>=0?(p.wfStep-1):0])+'</div>';
+h+='<div class="pb-step">'+I.chevronR+' 当前节点：'+esc(WF_STEPS[Math.min(Math.max(Number(p.wfStep)||1,1),10)-1])+'</div>';
 if(p.risk)h+='<div class="pb-risk">'+I.warn+' '+esc(p.risk)+'</div>';
 h+='</div>';
 return h;
@@ -1724,7 +1795,7 @@ html+='<td>'+esc(p.producer)+'</td>';
 html+='<td>'+esc(p.partner)+'</td>';
 html+='<td>'+statusBadge(p.status)+'</td>';
 html+='<td><div class="flex items-center gap-8"><div class="progress-bar" style="width:60px"><div class="fill" style="width:'+p.progress+'%"></div></div><span class="text-sm">'+p.progress+'%</span></div></td>';
-html+='<td class="text-sm">'+p.deadline+'</td>';
+html+='<td class="text-sm">'+esc(p.deadline)+'</td>';
 html+='<td class="text-sm">'+p.crewSize+'人</td></tr>';
 });
 html+='</tbody></table></div>';
@@ -1791,12 +1862,12 @@ if(p.risk)html+='<div class="card card-pad mb-12" style="background:var(--danger
 html+='<div class="card card-pad mb-12">';
 html+='<div class="info-row"><span class="label">立项来源</span><span class="value">'+esc(p.source||'自主立项')+'</span></div>';
 html+='<div class="info-row"><span class="label">项目类型</span><span class="value">'+esc(p.type)+'</span></div>';
-html+='<div class="info-row"><span class="label">项目等级</span><span class="value">'+p.level+'项目</span></div>';
+html+='<div class="info-row"><span class="label">项目等级</span><span class="value">'+esc(p.level)+'项目</span></div>';
 html+='<div class="info-row"><span class="label">制片人</span><span class="value">'+esc(p.producer)+'</span></div>';
 html+='<div class="info-row"><span class="label">合作方</span><span class="value">'+esc(p.partner)+'</span></div>';
 html+='<div class="info-row"><span class="label">发布平台</span><span class="value">'+esc(p.platform)+'</span></div>';
-html+='<div class="info-row"><span class="label">计划发布</span><span class="value">'+p.publishDate+'</span></div>';
-html+='<div class="info-row"><span class="label">截止日期</span><span class="value">'+p.deadline+'</span></div>';
+html+='<div class="info-row"><span class="label">计划发布</span><span class="value">'+esc(p.publishDate)+'</span></div>';
+html+='<div class="info-row"><span class="label">截止日期</span><span class="value">'+esc(p.deadline)+'</span></div>';
 html+='</div>';
 html+='<div class="card card-pad"><div class="mb-8 font-600">完成进度</div><div class="progress-bar" style="height:8px;margin-bottom:8px"><div class="fill" style="width:'+p.progress+'%"></div></div><div class="text-sm text-t2">'+p.progress+'%</div></div>';
 if(p.retrospective){
@@ -1828,11 +1899,12 @@ return html;
 }
 if(tab==='crew'){
 var html='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>临时剧组</strong> · 项目结束后自动解散，成员回到所属部门</div></div>';
-p.crew.forEach(function(m,i){
+var crewArr=p.crew||[];
+crewArr.forEach(function(m,i){
 var color=avatarColor(m.dept);
 html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:'+color+'">'+initials(m.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(m.name)+'</div><div class="mc-role">'+esc(m.role)+'</div></div>'+(m.dept?deptBadge(m.dept):'')+(isAdmin()?'<button class="btn btn-danger btn-sm" onclick="removeCrewMember('+p.id+','+i+')">移除</button>':'')+'</div></div>';
 });
-if(p.crew.length===0)html+='<div class="empty" style="padding:16px">剧组尚未成立</div>';
+if(crewArr.length===0)html+='<div class="empty" style="padding:16px">剧组尚未成立</div>';
 if(crewFormFor===p.id&&isAdmin()){
 html+='<div class="card card-pad mb-8"><div class="font-600 mb-8">添加成员</div>';
 html+='<div class="form-group mb-8"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">部门</label><select id="crew-dept" onchange="filterCrewMembers()"><option>全部</option><option>主持部</option><option>摄影部</option><option>后期部</option><option>无</option></select></div>';
@@ -1841,7 +1913,7 @@ html+='<div class="form-group mb-8"><label style="font-size:13px;font-weight:500
 html+='<div class="flex gap-8"><button class="btn btn-primary btn-sm" onclick="saveCrewMember('+p.id+')">确认</button><button class="btn btn-ghost btn-sm" onclick="cancelCrewForm()">取消</button></div></div>';
 }
 if(isAdmin())html+='<div class="mt-12"><button class="btn btn-ghost btn-sm" onclick="addCrewMember('+p.id+')">'+I.plus+'添加成员</button></div>';
-html+='<div class="text-sm text-t3 mt-8">剧组共 '+p.crew.length+' 人 · 临时组建</div>';
+html+='<div class="text-sm text-t3 mt-8">剧组共 '+crewArr.length+' 人 · 临时组建</div>';
 return html;
 }
 if(tab==='tasks'){
@@ -1867,7 +1939,7 @@ html+='</div><div style="flex:1"><div class="font-600 '+(t.done?'text-t3'+';text
 return html;
 }
 if(tab==='workflow'){
-var step=p.wfStep;
+var step=Math.min(Math.max(Number(p.wfStep)||1,1),10);
 var SC=['#94a3b8','#94a3b8','#f59e0b','#3b82f6','#06b6d4','#6366f1','#06b6d4','#8b5cf6','#f59e0b','#10b981'];
 var html='<div class="card card-pad"><div class="mb-8 flex justify-between items-center"><span class="text-sm text-t2">标准项目工作流</span><span class="text-sm font-600" style="color:'+SC[step-1]+'">第 '+step+' 步 / 共 10 步</span></div>';
 html+='<div class="vstepper">';
@@ -1932,7 +2004,7 @@ passFinal:function(){p.status='待发布';p.wfStep=9;showToast('最终审核通�
 returnFinal:function(){p.status='修改中';p.wfStep=9;showToast('已退回修改');},
 publish:function(){p.status='已发布';p.wfStep=9;p.progress=100;showToast('已发布到'+p.platform);},
 retro:function(){openRetrospective(p.id);},
-archive:function(){p.status='已归档';p.wfStep=10;p.crew=[];showToast('已归档，剧组已解散');}
+archive:function(){p.status='已归档';p.wfStep=10;(p.crew||[]).forEach(function(cm){var mm=DATA.members.find(function(x){return x.name===cm.name;});if(mm){mm.currentProjects=Math.max(0,(mm.currentProjects||0)-1);if(mm.currentProjects===0)mm.status='空闲';}});p.crew=[];showToast('已归档，剧组已解散');}
 };
 if(actions[action])actions[action]();
 saveData();
@@ -2039,7 +2111,7 @@ return m.dept===memberFilter;
 }).forEach(function(m){
 html+='<tr style="cursor:pointer" onclick="openMember('+m.id+')">';
 html+='<td class="font-600">'+esc(m.name)+(m.isAdmin?' <span class="badge st-purple" style="font-size:10px">管理员</span>':'')+'</td>';
-html+='<td>'+m.grade+'</td>';
+html+='<td>'+esc(m.grade)+'</td>';
 html+='<td>'+(m.dept?deptBadge(m.dept):'<span class="badge st-gray">无</span>')+'</td>';
 html+='<td>'+esc(m.role)+'</td>';
 html+='<td>'+memberTypeBadge(m.type)+'</td>';
@@ -2071,9 +2143,9 @@ if(m.needMentor)html+='<span class="badge st-amber">需指导人</span>';
 html+='</div>';
 html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">基本信息</div>';
 html+='<div class="info-row"><span class="label">姓名</span><span class="value">'+esc(m.name)+'</span></div>';
-html+='<div class="info-row"><span class="label">年级/班级</span><span class="value">'+m.grade+' '+m.class+'</span></div>';
+html+='<div class="info-row"><span class="label">年级/班级</span><span class="value">'+esc(m.grade)+' '+esc(m.class)+'</span></div>';
 html+='<div class="info-row"><span class="label">所属部门</span><span class="value">'+(m.dept||'无（台长/特邀）')+'</span></div>';
-html+='<div class="info-row"><span class="label">参与类型</span><span class="value">'+m.type+'</span></div>';
+html+='<div class="info-row"><span class="label">参与类型</span><span class="value">'+esc(m.type)+'</span></div>';
 html+='<div class="info-row"><span class="label">当前状态</span><span class="value">'+m.status+'</span></div>';
 html+='<div class="info-row"><span class="label">考试暂停</span><span class="value">'+esc(m.examPause)+'</span></div>';
 html+='</div>';
@@ -2148,13 +2220,13 @@ var modal=document.getElementById('modal-content');
 var srcColor=c.source==='学校立项'?'st-blue':c.source==='自主立项'?'st-teal':'st-indigo';
 var html='<div class="modal-header"><h2>'+esc(c.title)+'</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
 html+='<div class="modal-body">';
-html+='<div class="tag-row mb-12"><span class="badge '+srcColor+'">'+c.source+'</span>'+statusBadge(c.status)+'</div>';
+html+='<div class="tag-row mb-12"><span class="badge '+srcColor+'">'+esc(c.source)+'</span>'+statusBadge(c.status)+'</div>';
 html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">核心创意</div><div class="text-sm" style="line-height:1.6">'+esc(c.coreIdea)+'</div></div>';
 html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">创意信息</div>';
 html+='<div class="info-row"><span class="label">提交方</span><span class="value">'+esc(c.submitter)+'</span></div>';
 html+='<div class="info-row"><span class="label">联系人</span><span class="value">'+esc(c.contact)+'</span></div>';
 html+='<div class="info-row"><span class="label">目标受众</span><span class="value">'+esc(c.target)+'</span></div>';
-html+='<div class="info-row"><span class="label">提交日期</span><span class="value">'+c.created+'</span></div>';
+html+='<div class="info-row"><span class="label">提交日期</span><span class="value">'+esc(c.created)+'</span></div>';
 if(c.hopeDate)html+='<div class="info-row"><span class="label">希望发布</span><span class="value">'+c.hopeDate+'</span></div>';
 if(c.venue)html+='<div class="info-row"><span class="label">场地</span><span class="value">'+esc(c.venue)+'</span></div>';
 if(c.props)html+='<div class="info-row"><span class="label">道具</span><span class="value">'+esc(c.props)+'</span></div>';
@@ -2178,7 +2250,7 @@ if(!c)return;
 if(action==='toProject'){
 if(!isAdmin()){showToast('仅管理员可转立项');return;}
 /* 从创意生成真实项目（待立项审核），管理员可在项目中心继续排人员 */
-var maxId=DATA.projects.reduce(function(m,p){return Math.max(m,p.id);},0);
+var maxId=DATA.projects.reduce(function(m,p){return Math.max(m,p.id||0);},0);
 var src=c.source==='学校立项'?'学校立项':c.source==='自主立项'?'自主立项':'联合立项';
 DATA.projects.push({
 id:maxId+1,title:c.title,source:src,level:'标准',producer:'待授权',partner:c.submitter||'无',status:'待立项审核',progress:0,publishDate:c.hopeDate||'',crewSize:0,type:'专题',deadline:'',platform:'抖音',risk:null,wfStep:3,crew:[],tasks:[]
@@ -2208,7 +2280,7 @@ modal.innerHTML='<div class="modal-header"><h2>提交立项申请</h2><button cl
 }
 document.getElementById('modal-overlay').classList.add('show');
 };
-window.closeModal=function(){document.getElementById('modal-overlay').classList.remove('show');};
+window.closeModal=function(){window._confirmFn=null;document.getElementById('modal-overlay').classList.remove('show');};
 
 /* ===== Phase 2 Pages ===== */
 function renderRecruit(){
@@ -2384,7 +2456,7 @@ document.getElementById('modal-overlay').classList.add('show');
 };
 
 /* ===== Checkin 打卡中心（按项目 / 会议打卡） ===== */
-function escJs(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function escJs(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 window.setCheckinView=function(v){checkinView=v;renderPage('checkin');};
 window.setCheckinUser=function(id){
 checkinUserId=Number(id)||null;
@@ -2401,7 +2473,7 @@ var pad=function(n){return n<10?'0'+n:''+n;};
 var time=pad(now.getHours())+':'+pad(now.getMinutes());
 var dup=DATA.checkins.some(function(c){return c.member===m.name&&c.date===today&&c.kind===kind&&c.refId===refId;});
 if(dup){showToast('今日已对该'+(kind==='project'?'项目':'会议')+'打过卡');return;}
-var maxId=DATA.checkins.reduce(function(a,c){return Math.max(a,c.id);},0);
+var maxId=DATA.checkins.reduce(function(a,c){return Math.max(a,c.id||0);},0);
 DATA.checkins.push({id:maxId+1,member:m.name,dept:m.dept||'',kind:kind,refId:refId,refName:refName,date:today,time:time});
 saveData();
 closeModal();
@@ -2409,11 +2481,10 @@ renderPage('checkin');
 showToast((kind==='project'?'项目':'会议')+'打卡成功 · '+refName);
 };
 /* 顶栏快捷打卡弹窗 */
-var _quickKind='project';
+
 /* 按项目/会议 → 勾选人员 → 批量打卡 */
 var _quickObj=null;
 window.quickCheckin=function(){
-_quickKind='project';
 _quickObj=null;
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>'+I.checkin+' 打卡</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
@@ -2429,7 +2500,6 @@ document.getElementById('modal-overlay').classList.add('show');
 setQuickKind('project');
 };
 window.setQuickKind=function(k){
-_quickKind=k;
 _quickObj=null;
 var b1=document.getElementById('qc-kind-p'),b2=document.getElementById('qc-kind-m');
 if(b1)b1.className=k==='project'?'active':'';
@@ -2513,7 +2583,7 @@ var m=DATA.members.filter(function(x){return x.id===uid;})[0];
 if(!m)return;
 var dup=DATA.checkins.some(function(c){return c.member===m.name&&c.date===today&&c.kind===kind&&c.refId===refId;});
 if(dup){skipped++;return;}
-var maxId=DATA.checkins.reduce(function(a,c){return Math.max(a,c.id);},0);
+var maxId=DATA.checkins.reduce(function(a,c){return Math.max(a,c.id||0);},0);
 DATA.checkins.push({id:maxId+1,member:m.name,dept:m.dept||'',kind:kind,refId:refId,refName:refName,date:today,time:time});
 added++;
 });
@@ -2703,9 +2773,9 @@ return html;
 }
 
 /* ===== Annual Timeline 年度时间轴 ===== */
-var timelineYear=2026;
+var timelineYear=new Date().getFullYear();
 var TL_CATS={'招新':'#8b5cf6','活动':'#06b6d4','专题':'#3b82f6','管理':'#10b981','其他':'#64748b'};
-window.setTimelineYear=function(y){timelineYear=Number(y)||2026;renderPage('timeline');};
+window.setTimelineYear=function(y){timelineYear=Number(y)||new Date().getFullYear();renderPage('timeline');};
 window.addTimelinePlan=function(){
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>添加年度计划</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
@@ -2753,7 +2823,10 @@ function renderTimeline(){
 var html='';
 html+='<div class="card card-pad mb-12" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
 html+='<div class="flex items-center gap-8" style="flex-wrap:wrap"><span class="font-600">年度时间轴</span>';
-html+='<select onchange="setTimelineYear(this.value)" style="max-width:110px"><option value="2026"'+(timelineYear===2026?' selected':'')+'>2026</option><option value="2027"'+(timelineYear===2027?' selected':'')+'>2027</option></select>';
+var curYear=new Date().getFullYear();
+var yrOpts='';
+for(var yy=curYear-2;yy<=curYear+8;yy++){yrOpts+='<option value="'+yy+'"'+(timelineYear===yy?' selected':'')+'>'+yy+'</option>';}
+html+='<select onchange="setTimelineYear(this.value)" style="max-width:110px">'+yrOpts+'</select>';
 html+='<span class="text-sm text-t2">'+timelineYear+' 年 · 项目按截止月份排布，计划可补充</span></div>';
 if(isAdmin())html+='<button class="btn btn-primary btn-sm" onclick="addTimelinePlan()">'+I.plus+'添加年度计划</button>';
 html+='</div>';
@@ -2770,14 +2843,13 @@ html+='<div class="tl-head'+(nowMonth===mm&&now.getFullYear()===timelineYear?' t
 for(var mo=1;mo<=12;mo++){
 var projs=DATA.projects.filter(function(p){
 if(!p.deadline)return false;
-var y=parseInt(p.deadline.slice(0,4),10);
-var mm=parseInt(p.deadline.slice(5,7),10);
-return y===timelineYear&&mm===mo;
+var pd=parseDateStr(p.deadline);
+return pd&&pd.getFullYear()===timelineYear&&(pd.getMonth()+1)===mo;
 });
 html+='<div class="tl-cell tl-project">';
 projs.forEach(function(p){
 var cls=p.status==='已归档'?'archived':p.level==='\u91cd\u70b9'?'key':p.level==='\u5c0f\u578b'?'small':'';
-html+='<span class="tl-proj '+cls+'" style="cursor:pointer" onclick="openProject('+p.id+')" title="'+esc(p.title)+' · '+p.deadline+'">'+esc(p.title)+'</span>';
+html+='<span class="tl-proj '+cls+'" style="cursor:pointer" onclick="openProject('+p.id+')" title="'+esc(p.title)+' · '+esc(p.deadline)+'">'+esc(p.title)+'</span>';
 });
 if(projs.length===0)html+='<span style="font-size:10px;color:var(--text3)">—</span>';
 html+='</div>';
@@ -2905,11 +2977,11 @@ try{loadCloudSDK();}catch(e){console.error('loadCloudSDK失败',e);}
 /* 备份提醒：距上次导出超过 7 天且存在数据时提示（管理员可见） */
 try{
 if(isAdmin()&&DATA.projects.length>0){
-if(!lastExport){
+if(!lastExport||!parseDateStr(lastExport)){
 showToast('提示：请尽快导出一次数据备份');
 }else{
-var days=Math.floor((Date.parse(todayStr())-Date.parse(lastExport))/86400000);
-if(days>=7)showToast('该备份了：距上次导出已 '+days+' 天，侧边栏可导出 JSON');
+var days=Math.floor((parseDateStr(todayStr())-parseDateStr(lastExport))/86400000);
+if(!isNaN(days)&&days>=7)showToast('该备份了：距上次导出已 '+days+' 天，侧边栏可导出 JSON');
 }
 }
 }catch(e){}
@@ -2917,6 +2989,19 @@ try{navigate('dashboard');}catch(e){
 console.error('首次渲染失败，500ms后重试',e);
 setTimeout(function(){try{navigate('dashboard');}catch(_){}},500);
 }
+/* 多标签页同步：另一标签页保存数据时，本页自动刷新（10 年多人场景防互相覆盖） */
+try{
+window.addEventListener('storage',function(e){
+if(e.key===LS_KEY&&STORAGE_OK&&!cloudEnabled()){
+try{
+loadData();
+migrateData();
+renderPage(currentPage);
+showToast('已检测到其他页面的数据更新并同步');
+}catch(_){}
+}
+});
+}catch(_){}
 }
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initApp);}
 else{initApp();}
