@@ -2108,7 +2108,7 @@ html+='</div>';
 html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)">电视台保留立项决定权、专业改编权、人员排期权、制作方式决定权和最终发布权。</div></div>';
 html+='</div>';
 html+='<div class="modal-footer">';
-if(c.status==='创意待整理'){
+if(isAdmin()&&c.status==='创意待整理'){
 html+='<button class="btn btn-primary" onclick="creativeAction(\'toProject\','+c.id+')">转为立项申请</button>';
 html+='<button class="btn btn-ghost" onclick="creativeAction(\'return\','+c.id+')">退回完善</button>';
 html+='<button class="btn btn-danger" onclick="creativeAction(\'reject\','+c.id+')">拒绝</button>';
@@ -2120,9 +2120,24 @@ document.getElementById('modal-overlay').classList.add('show');
 window.creativeAction=function(action,id){
 var c=DATA.creatives.find(function(x){return x.id===id;});
 if(!c)return;
-if(action==='toProject'){c.status='待立项审核';showToast('已转为立项申请，待台长审核');}
-if(action==='return'){c.status='创意待整理';showToast('已退回完善');}
-if(action==='reject'){c.status='已拒绝';showToast('已拒绝该创意');}
+if(action==='toProject'){
+if(!isAdmin()){showToast('仅管理员可转立项');return;}
+/* 从创意生成真实项目（待立项审核），管理员可在项目中心继续排人员 */
+var maxId=DATA.projects.reduce(function(m,p){return Math.max(m,p.id);},0);
+var src=c.source==='学校立项'?'学校立项':c.source==='自主立项'?'自主立项':'联合立项';
+DATA.projects.push({
+id:maxId+1,title:c.title,source:src,level:'标准',producer:'待授权',partner:c.submitter||'无',status:'待立项审核',progress:0,publishDate:c.hopeDate||'',crewSize:0,type:'专题',deadline:'',platform:'抖音',risk:null,wfStep:3,crew:[],tasks:[]
+});
+c.status='已立项';
+logAction('创意转立项','「'+c.title+'」由创意转为立项申请（'+src+'）');
+showToast('已转成立项申请，可在项目中心审批并排人员');
+}else if(action==='return'){
+if(!isAdmin()){showToast('仅管理员可操作');return;}
+c.status='创意待整理';showToast('已退回完善');
+}else if(action==='reject'){
+if(!isAdmin()){showToast('仅管理员可操作');return;}
+c.status='已拒绝';showToast('已拒绝该创意');
+}
 saveData();
 closeModal();
 renderPage('creative');
