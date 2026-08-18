@@ -776,6 +776,7 @@ var memberFilter='all';
 var creativeFilter='all';
 var taskFormFor=null;
 var crewFormFor=null;
+var equipFormFor=null;
 var searchQuery='';
 var _submitting=false;
 var recruitStageFilter='';
@@ -1265,6 +1266,37 @@ saveData();
 logAction('删除任务','「'+p.title+'」删除任务「'+t.name+'」');
 if(selectedProject)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'tasks');
 showToast('任务已删除');
+});
+};
+/* ---- 项目设备安排 ---- */
+window.addProjectEquipment=function(pid){equipFormFor=pid;var p=DATA.projects.find(function(x){return x.id===pid;});if(selectedProject&&p)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'equipment');};
+window.cancelEquipForm=function(){equipFormFor=null;var p=selectedProject;if(p)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'equipment');};
+window.saveProjectEquipment=function(pid){
+var p=DATA.projects.find(function(x){return x.id===pid;});
+if(!p)return;
+var sel=document.getElementById('proj-eq');
+var eid=parseInt(sel?sel.value:'',10);
+var e=(DATA.equipment||[]).find(function(x){return x.id===eid;});
+if(!e){showToast('请选择设备');return;}
+if(e.status!=='可用'){showToast('该设备已被占用');return;}
+var adminName=(function(){var a=(DATA.members||[]).find(function(m){return m.isAdmin;});return a?a.name:'管理员';})();
+e.status='借用中';e.projectId=p.id;e.project=p.title;e.borrower=adminName;e.returnDate='';
+saveData();
+logAction('安排设备','「'+p.title+'」安排设备 '+e.name);
+equipFormFor=null;
+if(selectedProject)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'equipment');
+showToast('设备已安排到项目');
+};
+window.releaseProjectEquipment=function(pid,eid){
+var p=DATA.projects.find(function(x){return x.id===pid;});
+var e=(DATA.equipment||[]).find(function(x){return x.id===eid;});
+if(!e)return;
+showConfirm('归还设备','确定归还设备「'+esc(e.name)+'」吗？',function(){
+e.status='可用';e.projectId=null;e.project=null;e.borrower=null;e.returnDate=null;
+saveData();
+logAction('归还设备','「'+(p?p.title:'')+'」归还设备 '+e.name);
+if(selectedProject)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'equipment');
+showToast('设备已归还');
 });
 };
 
@@ -1939,6 +1971,7 @@ html+='<div class="panel-tabs">';
 html+='<button class="panel-tab '+(currentTab==='overview'?'active':'')+'" onclick="switchTab(\'overview\')">概览</button>';
 html+='<button class="panel-tab '+(currentTab==='crew'?'active':'')+'" onclick="switchTab(\'crew\')">剧组</button>';
 html+='<button class="panel-tab '+(currentTab==='tasks'?'active':'')+'" onclick="switchTab(\'tasks\')">任务</button>';
+html+='<button class="panel-tab '+(currentTab==='equipment'?'active':'')+'" onclick="switchTab(\'equipment\')">设备</button>';
 html+='<button class="panel-tab '+(currentTab==='workflow'?'active':'')+'" onclick="switchTab(\'workflow\')">工作流</button>';
 html+='<button class="panel-tab '+(currentTab==='review'?'active':'')+'" onclick="switchTab(\'review\')">审核</button>';
 html+='</div>';
@@ -1951,8 +1984,8 @@ window.closePanel=function(){document.getElementById('slide-panel').classList.re
 window.switchTab=function(tab){
 currentTab=tab;
 if(!selectedProject)return;
-document.querySelectorAll('.panel-tab').forEach(function(t){t.classList.remove('active');});
-event.target.classList.add('active');
+try{document.querySelectorAll('.panel-tab').forEach(function(t){t.classList.remove('active');});}catch(_){}
+try{document.querySelectorAll('.panel-tab').forEach(function(t){if(t.getAttribute&&t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'"+tab+"'")>=0)t.classList.add('active');});}catch(_){}
 document.getElementById('panel-body').innerHTML=renderProjectTab(selectedProject,tab);
 };
 
@@ -2041,6 +2074,27 @@ html+='</div><div style="flex:1"><div class="font-600 '+(t.done?'text-t3'+';text
 }
 return html;
 }
+if(tab==='equipment'){
+var html='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>设备安排</strong> · 与剧组同步，项目结束后自动归还设备</div></div>';
+var eqArr=(DATA.equipment||[]).filter(function(e){return e.projectId===p.id;});
+if(eqArr.length===0)html+='<div class="empty">尚未安排设备</div>';
+eqArr.forEach(function(e,i){
+html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:#0f766e">'+initials(e.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(e.name)+'</div><div class="mc-role">'+esc(e.type)+'</div></div>'+statusBadge(e.status)+(isAdmin()?'<button class="btn btn-danger btn-sm" onclick="releaseProjectEquipment('+p.id+','+e.id+')">归还</button>':'')+'</div><div class="mc-info"><span>'+(e.notes?esc(e.notes):'')+'</span><span>'+(e.borrower?'借出人 '+esc(e.borrower):'')+'</span></div></div>';
+});
+/* 添加设备表单 */
+var availEq=(DATA.equipment||[]).filter(function(e){return e.status==='可用';});
+if(equipFormFor===p.id&&isAdmin()){
+html+='<div class="card card-pad mb-8"><div class="font-600 mb-8">添加设备</div>';
+html+='<div class="form-group mb-8"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择设备（可用）</label><select id="proj-eq"><option value="">请选择</option>';
+availEq.forEach(function(e){html+='<option value="'+e.id+'">'+esc(e.name)+'（'+esc(e.type)+' · '+(e.notes?esc(e.notes):'')+'）</option>';});
+html+='</select></div>';
+html+='<div class="flex gap-8"><button class="btn btn-primary btn-sm" onclick="saveProjectEquipment('+p.id+')">确认</button><button class="btn btn-ghost btn-sm" onclick="cancelEquipForm()">取消</button></div></div>';
+}
+if(isAdmin()&&availEq.length>0)html+='<div class="mt-12"><button class="btn btn-ghost btn-sm" onclick="addProjectEquipment('+p.id+')">'+I.plus+'添加设备</button></div>';
+if(availEq.length===0&&isAdmin())html+='<div class="text-sm text-t3 mt-8">当前没有可用设备（设备页可管理）</div>';
+html+='<div class="text-sm text-t3 mt-8">共 '+eqArr.length+' 台设备 · 项目结束后自动归还</div>';
+return html;
+}
 if(tab==='workflow'){
 var step=Math.min(Math.max(Number(p.wfStep)||1,1),10);
 var SC=['#94a3b8','#94a3b8','#f59e0b','#3b82f6','#06b6d4','#6366f1','#06b6d4','#8b5cf6','#f59e0b','#10b981'];
@@ -2110,7 +2164,7 @@ passFinal:function(){p.status='待发布';p.wfStep=9;addReview('最终审核','�
 returnFinal:function(){p.status='修改中';p.wfStep=9;addReview('最终审核','退回修改');showToast('已退回修改');},
 publish:function(){p.status='已发布';p.wfStep=9;p.progress=100;addReview('审核发布','已发布到 '+p.platform);showToast('已发布到'+p.platform);},
 retro:function(){openRetrospective(p.id);},
-archive:function(){p.status='已归档';p.wfStep=10;(p.crew||[]).forEach(function(cm){var mm=DATA.members.find(function(x){return x.name===cm.name;});if(mm){mm.currentProjects=Math.max(0,(mm.currentProjects||0)-1);if(mm.currentProjects===0)mm.status='空闲';}});p.crew=[];showToast('已归档，剧组已解散');}
+archive:function(){p.status='已归档';p.wfStep=10;(p.crew||[]).forEach(function(cm){var mm=DATA.members.find(function(x){return x.name===cm.name;});if(mm){mm.currentProjects=Math.max(0,(mm.currentProjects||0)-1);if(mm.currentProjects===0)mm.status='空闲';}});p.crew=[];(DATA.equipment||[]).forEach(function(e){if(e.projectId===p.id){e.status='可用';e.projectId=null;e.project=null;e.borrower=null;e.returnDate=null;}});showToast('已归档，剧组已解散、设备已归还');}
 };
 if(actions[action])actions[action]();
 saveData();
