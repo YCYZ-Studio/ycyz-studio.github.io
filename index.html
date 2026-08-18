@@ -617,8 +617,7 @@ templates:[
 ],
 checkins:[],
 meetings:[
-{id:1,name:'电视台周例会',date:'每周一',time:'17:30',host:'陈奕多',note:'全体成员参加'},
-{id:2,name:'选题会',date:'每周五',time:'17:00',host:'陈奕多',note:'创意提案与立项讨论'}
+{id:1,name:'电视台启动会议',date:'2026-08-25',time:'17:30',host:'陈奕多',note:'开学动员 + 军训拍摄部署（暂定）'}
 ],
 annualPlans:[
 ],
@@ -2725,8 +2724,8 @@ var mt=id?((DATA.meetings||[]).filter(function(x){return x.id===id;})[0]||null):
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>'+(mt?'编辑会议':'新建会议')+'</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
 html+='<div class="modal-body">';
-html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">会议名称</label><input id="mt-name" value="'+(mt?esc(mt.name):'')+'" placeholder="如：周例会"></div>';
-html+='<div class="grid grid-2 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">周期 / 日期</label><input id="mt-date" value="'+(mt?esc(mt.date):'每周一')+'"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">时间</label><input id="mt-time" value="'+(mt?esc(mt.time):'17:30')+'" placeholder="如 17:30"></div></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">会议名称</label><input id="mt-name" value="'+(mt?esc(mt.name):'')+'" placeholder="如：电视台启动会议"></div>';
+html+='<div class="grid grid-2 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">周期 / 日期</label><input id="mt-date" value="'+(mt?esc(mt.date):'')+'" placeholder="如：2026-08-25 或 每周一"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">时间</label><input id="mt-time" value="'+(mt?esc(mt.time):'17:30')+'" placeholder="如 17:30"></div></div>';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">主持人</label><input id="mt-host" value="'+(mt?esc(mt.host):'')+'" placeholder="如：陈奕多"></div>';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">说明</label><input id="mt-note" value="'+(mt?esc(mt.note):'')+'" placeholder="可选"></div>';
 html+='</div>';
@@ -2958,14 +2957,21 @@ html+='</div>';
 var months=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 var now=new Date();
 var nowMonth=now.getMonth()+1;
+/* 动态起始月：从该年份第一个有安排的月份开始（项目截止月 / 年度计划起始月） */
+var firstMo=13;
+DATA.projects.forEach(function(p){var pd=parseDateStr(p.deadline);if(pd&&pd.getFullYear()===timelineYear&&(pd.getMonth()+1)<firstMo)firstMo=pd.getMonth()+1;});
+(DATA.annualPlans||[]).forEach(function(pl){if(pl.start&&pl.start<firstMo)firstMo=pl.start;});
+if(firstMo>12)firstMo=1;
+var startMo=firstMo;
+var visMonths=months.slice(startMo-1);
 html+='<div class="tl-wrap"><div class="tl-grid">';
 /* 表头 */
-months.forEach(function(m,i){
-var mm=i+1;
+visMonths.forEach(function(m,i){
+var mm=startMo+i;
 html+='<div class="tl-head'+(nowMonth===mm&&now.getFullYear()===timelineYear?' tl-now':'')+'">'+m+(nowMonth===mm&&now.getFullYear()===timelineYear?' · 今':'')+'</div>';
 });
 /* 项目行 */
-for(var mo=1;mo<=12;mo++){
+for(var mo=startMo;mo<=12;mo++){
 var projs=DATA.projects.filter(function(p){
 if(!p.deadline)return false;
 var pd=parseDateStr(p.deadline);
@@ -2979,10 +2985,11 @@ html+='<span class="tl-proj '+cls+'" style="cursor:pointer" onclick="openProject
 if(projs.length===0)html+='<span style="font-size:10px;color:var(--text3)">—</span>';
 html+='</div>';
 }
-/* 计划行（跨月横条） */
+/* 计划行（跨月横条，相对列定位） */
 (DATA.annualPlans||[]).forEach(function(pl){
-var start=Math.max(1,pl.start),end=Math.min(12,pl.end);
-html+='<div class="tl-plan" style="grid-column:'+start+' / '+(end+1)+';background:'+(pl.color||'#64748b')+'"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(pl.title)+' <span style="opacity:.75">('+start+'-'+end+'月)</span></span>'+(isAdmin()?'<span class="tl-del" onclick="removeTimelinePlan('+pl.id+')">×</span>':'')+'</div>';
+var start=Math.max(startMo,pl.start),end=Math.min(12,pl.end);
+if(end<start)end=start;
+html+='<div class="tl-plan" style="grid-column:'+(start-startMo+1)+' / '+(end-startMo+2)+';background:'+(pl.color||'#64748b')+'"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(pl.title)+' <span style="opacity:.75">('+pl.start+'-'+pl.end+'月)</span></span>'+(isAdmin()?'<span class="tl-del" onclick="removeTimelinePlan('+pl.id+')">×</span>':'')+'</div>';
 });
 html+='</div></div>';
 /* 图例 + 计划列表 */
