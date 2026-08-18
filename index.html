@@ -1178,8 +1178,62 @@ autoAdded=true;
 saveData();
 logAction('添加任务','「'+p.title+'」新增任务「'+name+'」负责人：'+(as==='待分配'?'待分配':as)+(autoAdded?'（已自动加入剧组）':''));
 taskFormFor=null;
+if(selectedProject)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'tasks');showToast('任务已添加'+(autoAdded?'，负责人已同步到剧组':''));
+};
+/* ---- 任务编辑 / 删除 ---- */
+var taskEditFor=null;
+window.editTask=function(pid,tidx){
+var p=DATA.projects.find(function(x){return x.id===pid;});
+if(!p||!p.tasks||!p.tasks[tidx])return;
+taskEditFor={pid:pid,tidx:tidx};
+var t=p.tasks[tidx];
+var modal=document.getElementById('modal-content');
+var html='<div class="modal-header"><h2>编辑任务</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
+html+='<div class="modal-body">';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">任务名称</label><input id="et-name" value="'+esc(t.name)+'"></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">负责人</label><select id="et-as"><option value="">待分配</option>';
+(DATA.members||[]).forEach(function(mm){html+='<option value="'+esc(mm.name)+'"'+(t.as===mm.name?' selected':'')+'>'+esc(mm.name)+'（'+(mm.dept||'台长/管理')+'）</option>';});
+html+='</select></div>';
+html+='</div>';
+html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveTaskEdit()">保存</button></div>';
+modal.innerHTML=html;
+document.getElementById('modal-overlay').classList.add('show');
+};
+window.saveTaskEdit=function(){
+if(!taskEditFor)return;
+var p=DATA.projects.find(function(x){return x.id===taskEditFor.pid;});
+if(!p||!p.tasks||!p.tasks[taskEditFor.tidx])return;
+var t=p.tasks[taskEditFor.tidx];
+var oldAs=t.as;
+var name=document.getElementById('et-name').value.trim();
+if(!name){showToast('请输入任务名称');return;}
+var as=document.getElementById('et-as').value.trim()||'待分配';
+t.name=name;t.as=as;
+/* 负责人变更自动同步剧组 */
+if(as!=='待分配'&&!(p.crew||[]).some(function(cm){return cm.name===as;})){
+p.crew=p.crew||[];
+var mm=(DATA.members||[]).find(function(x){return x.name===as;});
+p.crew.push({name:as,role:'任务执行',dept:mm&&mm.dept?mm.dept:null});
+p.crewSize=(p.crew||[]).length;
+}
+saveData();
+logAction('编辑任务','「'+p.title+'」任务「'+name+'」负责人 '+(oldAs||'待分配')+' → '+(as==='待分配'?'待分配':as));
+taskEditFor=null;
+closeModal();
 if(selectedProject)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'tasks');
-showToast('任务已添加'+(autoAdded?'，负责人已同步到剧组':''));
+showToast('任务已更新');
+};
+window.deleteTask=function(pid,tidx){
+var p=DATA.projects.find(function(x){return x.id===pid;});
+if(!p||!p.tasks||!p.tasks[tidx])return;
+var t=p.tasks[tidx];
+showConfirm('删除任务','确定删除任务「'+esc(t.name)+'」吗？',function(){
+p.tasks.splice(tidx,1);
+saveData();
+logAction('删除任务','「'+p.title+'」删除任务「'+t.name+'」');
+if(selectedProject)document.getElementById('panel-body').innerHTML=renderProjectTab(p,'tasks');
+showToast('任务已删除');
+});
 };
 
 /* ---- 新增成员 ---- */
@@ -1950,7 +2004,7 @@ html+='<div class="empty">暂无任务</div>';
 p.tasks.forEach(function(t,i){
 html+='<div class="card card-pad mb-8" style="padding:10px 12px"><div class="flex items-center gap-12"><div title="点击切换完成状态" style="width:18px;height:18px;border-radius:4px;border:2px solid '+(t.done?'var(--success)':'var(--border2)')+';background:'+(t.done?'var(--success)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer" onclick="toggleTask('+p.id+','+i+')">';
 if(t.done)html+='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>';
-html+='</div><div style="flex:1"><div class="font-600 '+(t.done?'text-t3'+';text-decoration:line-through':'')+'">'+esc(t.name)+'</div><div class="text-sm text-t2">'+I.user+' '+esc(t.as)+'</div></div></div></div>';
+html+='</div><div style="flex:1"><div class="font-600 '+(t.done?'text-t3'+';text-decoration:line-through':'')+'">'+esc(t.name)+'</div><div class="text-sm text-t2">'+I.user+' '+esc(t.as)+'</div></div>'+(isAdmin()?'<div class="flex gap-4" style="flex-shrink:0"><button class="btn btn-ghost btn-sm" title="编辑任务" onclick="editTask('+p.id+','+i+')">'+I.edit+'</button><button class="btn btn-danger btn-sm" title="删除任务" onclick="deleteTask('+p.id+','+i+')">'+I.close+'</button></div>':'')+'</div></div>';
 });
 }
 return html;
