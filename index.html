@@ -423,6 +423,9 @@ input,textarea,select{font-size:16px}
         <div class="info"><div class="name">校园电视台</div><div class="role" id="sidebar-user-mode">成员模式</div></div>
       </div>
       <div class="divider" style="margin:8px 0"></div>
+      <div class="flex gap-8 mb-8" style="flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="openTechSupport()">🔧 技术支持</button>
+      </div>
       <div id="admin-tools" class="flex gap-8" style="flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="exportData()">导出数据</button>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">导入数据</button>
@@ -805,12 +808,12 @@ try{var _ai=localStorage.getItem('wb_admin_identity');if(_ai&&ADMIN_PASSES[_ai])
 try{var _ap=JSON.parse(localStorage.getItem('wb_admin_passes')||'null');if(_ap&&_ap.台长)ADMIN_PASSES.台长=_ap.台长;if(_ap&&_ap.创始人)ADMIN_PASSES.创始人=_ap.创始人;if(_ap&&_ap.老师)ADMIN_PASSES.老师=_ap.老师;}catch(_e2){}
 /* 当前管理员姓名（按身份） */
 function currentAdminName(){
-var map={台长:'台长',创始人:'创始人',老师:'余颖'};
+var map={台长:'台长',老师:'余颖'};
 var m=(DATA.members||[]).find(function(x){return x.isAdmin&&x.role==='台长';});
-var name=map[adminIdentity]||'管理员';
+var name=map[adminIdentity]||adminIdentity||'管理员';
 if(adminIdentity==='台长'&&m)name=m.name;
-var f=(DATA.members||[]).find(function(x){return x.role==='创始人';});
-if(adminIdentity==='创始人'&&f)name=f.name;
+var fm=(DATA.members||[]).find(function(x){return x.name===adminIdentity;});
+if(fm)name=fm.name;
 return name;
 }
 var lastExport=null;
@@ -1023,6 +1026,26 @@ applyRoleUI();
 navigate(currentPage);
 showToast(role==='admin'?'已切换为管理员模式':'已切换为成员模式');
 };
+/* 技术支持窗口：技术顾问（已毕业创始人学长） + 联系方式 */
+window.openTechSupport=function(){
+var modal=document.getElementById('modal-content');
+var html='<div class="modal-header"><h2>🔧 技术支持</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
+html+='<div class="modal-body">';
+html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>技术顾问团</strong> · 由已毕业的创始人学长组成，为电视台提供技术支援</div></div>';
+var techs=(DATA.members||[]).filter(function(m){return m.role==='创始人';});
+if(techs.length===0){
+html+='<div class="empty">技术顾问名单整理中——请台长补充创始人学长资料</div>';
+}else{
+techs.forEach(function(t){
+html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:#0f766e">'+initials(t.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(t.name)+'</div><div class="mc-role">创始人 · '+(t.grade?esc(t.grade):'已毕业')+(t.mainSkill?' · '+esc(t.mainSkill):'')+'</div></div><span class="badge st-teal">技术顾问</span></div><div class="mc-info"><span>'+(t.bio?esc(t.bio):'')+'</span><span>'+(t.contact?'联系：'+esc(t.contact):'')+'</span></div></div>';
+});
+}
+html+='<div class="card card-pad"><div class="font-600 mb-8">使用说明</div><div class="text-sm text-t2" style="line-height:1.8"><div>&middot; 工作台使用问题、系统维护需求可联系技术顾问</div><div>&middot; 顾问为学长公益支持，请礼貌预约时间</div><div>&middot; 紧急问题可直接找台长（陈奕多）</div></div></div>';
+html+='</div>';
+html+='<div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">我知道了</button></div>';
+modal.innerHTML=html;
+document.getElementById('modal-overlay').classList.add('show');
+};
 window.askSwitchRole=function(){
 if(isAdmin()){
 showConfirm('切换为成员模式','确定要切换为成员模式吗？管理功能将被隐藏。',function(){setRole('member');});
@@ -1030,7 +1053,7 @@ return;
 }
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>进入管理员模式</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
-html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="台长">台长</option><option value="创始人">创始人</option><option value="老师">老师（指导）</option></select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">台长/创始人/老师口令各自独立；默认均为 ycyz1938，可在设置中修改。</div></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.name)+'">创始人 · '+esc(f.name)+'（学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">台长/老师/创始人（学长）口令各自独立；默认均为 ycyz1938，可在设置中修改。</div></div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
@@ -1042,7 +1065,8 @@ var identity=idSel?idSel.value:'台长';
 var i=document.getElementById('role-pass');
 var val=i?i.value.trim():'';
 if(!val){showToast('请输入管理员口令');return;}
-if(val===ADMIN_PASSES[identity]){
+var needPass=ADMIN_PASSES[identity]||'ycyz1938';
+if(val===needPass){
 adminIdentity=identity;
 try{localStorage.setItem('wb_admin_identity',identity);}catch(_e){}
 closeModal();
