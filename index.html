@@ -569,6 +569,13 @@ departments:[
 {id:'camera',name:'摄影部',head:'待定',color:'#06b6d4',skills:['相机操作','构图','曝光对焦','镜头设计','灯光','现场收音','稳定器','多机位','设备管理','素材管理','摄影助理','录音助理']},
 {id:'post',name:'后期部',head:'待定',color:'#f59e0b',skills:['基础剪辑','采访剪辑','剧情剪辑','调色','字幕','声音后期','包装','特效','封面','横竖屏适配','文件输出','工程归档']}
 ],
+/* 专职岗位：已开设 / 预留（未来细分） */
+positions:[
+{id:1,name:'摄影师',dept:'摄影部',status:'已开设',desc:'主摄/多机位'},
+{id:2,name:'录音师',dept:'摄影部',status:'预留',desc:'专职收音岗位，待安排人选'},
+{id:3,name:'剪辑师',dept:'后期部',status:'已开设',desc:'剪辑成片'},
+{id:4,name:'宣发专员',dept:'后期部',status:'预留',desc:'内容宣发/平台运营，待安排人选'}
+],
 members:[
 {id:1,name:'陈奕多',grade:'高二',class:'4班',dept:null,role:'台长',isAdmin:true,type:'核心',mainSkill:'制片',subSkills:['策划','导演'],weeklyHours:15,status:'空闲',currentProjects:1,canProduce:true,needMentor:false,avail:'周一至周五放学后',canFullShoot:true,examPause:'无',bio:'电视台台长，管理员，统筹全局',trainings:[],履历:[],评价:'统筹能力强'},
 {id:2,name:'钟小琴',grade:'高二',class:'-',dept:'摄影部',role:'成员',type:'核心',mainSkill:'相机操作',subSkills:['构图','多机位'],weeklyHours:12,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部主力，擅长拍摄',trainings:[],履历:[],评价:'拍摄认真'},
@@ -634,6 +641,7 @@ function isValidData(d){
   if(!Array.isArray(d.creatives)||!Array.isArray(d.equipment)||!Array.isArray(d.alerts))return false;
   if(!Array.isArray(d.templates))return false;
   if(!Array.isArray(d.departments))return false;
+  if(d.positions!==undefined&&!Array.isArray(d.positions))return false;
   if(d.checkins!==undefined&&!Array.isArray(d.checkins))return false;
   if(d.meetings!==undefined&&!Array.isArray(d.meetings))return false;
   if(d.annualPlans!==undefined&&!Array.isArray(d.annualPlans))return false;
@@ -672,6 +680,7 @@ function mergeData(parsed){
     if(typeof m.id!=='number'||isNaN(m.id))m.id=0;
     return m;
   });
+  out.positions=out.positions||[];
   out.checkins=out.checkins||[];
   out.meetings=out.meetings||[];
   out.annualPlans=out.annualPlans||[];
@@ -1043,6 +1052,7 @@ window.clearData=function(){
 if(STORAGE_OK){try{localStorage.removeItem(LS_KEY);localStorage.removeItem(LS_BACKUP_KEY);}catch(e){}}
 DATA={
 departments:JSON.parse(JSON.stringify(DEMO_DATA.departments)),
+positions:JSON.parse(JSON.stringify(DEMO_DATA.positions)),
 members:[],
 creatives:[],
 projects:[],
@@ -2299,6 +2309,20 @@ html+='<div class="flex items-center gap-12"><div style="width:44px;height:44px;
 html+='<div class="card card-pad mb-12"><div class="section-title">'+I.edit+'能力标签</div><div class="tag-row">';
 dept.skills.forEach(function(s){html+='<span class="skill-tag" style="font-size:12px;padding:3px 8px">'+s+'</span>';});
 html+='</div></div>';
+
+/* 专职岗位（含预留） */
+var deptPositions=(DATA.positions||[]).filter(function(pt){return pt.dept===deptName;});
+html+='<div class="card card-pad mb-12"><div class="section-title">'+I.user+'专职岗位</div>';
+if(deptPositions.length===0){html+='<div class="text-sm text-t2">暂无岗位设定</div>';}
+else{
+html+='<div class="flex gap-8" style="flex-wrap:wrap">';
+deptPositions.forEach(function(pt){
+html+='<div class="card card-pad" style="padding:10px 14px;min-width:130px;flex:1;max-width:200px;border-left:3px solid '+(pt.status==='已开设'?'var(--success)':'var(--warning)')+'"><div class="flex items-center gap-8"><span class="font-600" style="font-size:13px">'+esc(pt.name)+'</span><span class="badge '+(pt.status==='已开设'?'st-green':'st-orange')+'">'+esc(pt.status)+'</span></div><div class="text-sm text-t3 mt-4">'+esc(pt.desc||'')+'</div></div>';
+});
+html+='</div>';
+}
+html+='<div class="text-sm text-t3 mt-8">录音师、宣发专员为预留岗位，人选确定后由管理员在成员档案任命</div>';
+html+='</div>';
 
 html+='<div class="card card-pad"><div class="section-title">'+I.members+'成员列表</div>';
 members.forEach(function(m){
