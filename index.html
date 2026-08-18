@@ -577,7 +577,8 @@ members:[
 {id:5,name:'郑惠心',grade:'高二',class:'9班',dept:'后期部',role:'成员',type:'核心',mainSkill:'剪辑',subSkills:['调色','字幕'],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:false,examPause:'期末前两周',bio:'后期部成员',trainings:[],履历:[],评价:''},
 {id:6,name:'姜真熙',grade:'高二',class:'4班',dept:'摄影部',role:'成员',type:'核心',mainSkill:'待定',subSkills:[],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部成员，专精领域未定',trainings:[],履历:[],评价:''},
 {id:7,name:'钟睿昕',grade:'高二',class:'4班',dept:'主持部',role:'成员',type:'核心',mainSkill:'主持',subSkills:['采访','配音'],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'主持部成员',trainings:[],履历:[],评价:''},
-{id:8,name:'汪聿轩',grade:'高二',class:'19班',dept:'摄影部',role:'成员',type:'核心',mainSkill:'照片摄影',subSkills:['构图'],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部成员，专精照片，个人设备：尼康 Z50 II',trainings:[],履历:[],评价:''}
+{id:8,name:'汪聿轩',grade:'高二',class:'19班',dept:'摄影部',role:'成员',type:'核心',mainSkill:'照片摄影',subSkills:['构图'],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部成员，专精照片'
+,device:'尼康 Z50 II',trainings:[],履历:[],评价:''}
 ],
 creatives:[
 ],
@@ -1190,7 +1191,7 @@ html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:50
 html+='<div class="grid grid-3 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">部门</label><select id="nm-dept"><option>台长/管理</option><option>主持部</option><option>摄影部</option><option>后期部</option><option>无</option></select></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">角色</label><select id="nm-role"><option>成员</option><option>部长</option><option>台长</option></select></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">参与类型</label><select id="nm-type"><option>核心</option><option>项目协作</option><option>特邀</option></select></div></div>';
 html+='<div class="grid grid-3 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">年级</label><input id="nm-grade" placeholder="如：高二"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">班级</label><input id="nm-class" placeholder="如：3班"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">每周可投入(h)</label><input id="nm-hours" type="number" value="10"></div></div>';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">主技能</label><input id="nm-mainSkill" placeholder="如：相机操作/剪辑/主持"></div>';
-html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">备注（个人设备等）</label><input id="nm-bio" placeholder="可选"></div>';
+html+='<div class="grid grid-2 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">个人设备</label><input id="nm-device" placeholder="如：尼康 Z50 II"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">备注</label><input id="nm-bio" placeholder="可选"></div></div>';
 html+='</div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveNewMember()">保存</button></div>';
 modal.innerHTML=html;
@@ -1223,6 +1224,7 @@ avail:'放学后',
 canFullShoot:true,
 examPause:'期末前两周',
 bio:document.getElementById('nm-bio').value.trim()||'',
+device:document.getElementById('nm-device')?(document.getElementById('nm-device').value.trim()||''):'',
 trainings:[],
 履历:[],
 评价:''
@@ -1543,6 +1545,19 @@ var total=DATA.projects.length;
 var archived=stepData[9].count;
 
 var html='';
+/* 管理员快捷操作面板 */
+if(isAdmin()){
+var pendingCreatives=(DATA.creatives||[]).filter(function(c){return c.status==='创意待整理';}).length;
+html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="font-600 mb-8">'+I.plus+' 快捷操作（管理员）</div>';
+html+='<div class="flex gap-8" style="flex-wrap:wrap">';
+html+='<button class="btn btn-primary btn-sm" onclick="openModal(\'project-submit\')">'+I.plus+'新建项目</button>';
+html+='<button class="btn btn-primary btn-sm" onclick="openAddMember()">'+I.plus+'添加成员</button>';
+html+='<button class="btn btn-primary btn-sm" onclick="quickCheckin()">'+I.checkin+'快捷打卡</button>';
+html+='<button class="btn btn-ghost btn-sm" onclick="navigate(\'creative\')">创意池待办'+(pendingCreatives>0?' <span class="badge st-red">'+pendingCreatives+'</span>':'')+'</button>';
+html+='<button class="btn btn-ghost btn-sm" onclick="navigate(\'logs\')">操作记录</button>';
+html+='<button class="btn btn-ghost btn-sm" onclick="exportData()">导出备份</button>';
+html+='</div></div>';
+}
 var today=todayStr();
 var todayD=parseDateStr(today);
 var tOverdue=DATA.projects.filter(function(p){var pd=parseDateStr(p.deadline);return pd&&todayD&&pd<todayD&&['已归档','已拒绝','已取消'].indexOf(p.status)<0;});
@@ -1923,7 +1938,9 @@ var html='';
 if(taskFormFor===p.id&&isAdmin()){
 html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">添加任务</div>';
 html+='<div class="form-group mb-8"><input id="new-task-name" placeholder="输入任务名称"></div>';
-html+='<div class="form-group mb-8"><input id="new-task-as" placeholder="输入负责人"></div>';
+html+='<div class="form-group mb-8"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">负责人</label><select id="new-task-as"><option value="">待分配</option>';
+(DATA.members||[]).forEach(function(mm){html+='<option value="'+esc(mm.name)+'">'+esc(mm.name)+'（'+(mm.dept||'台长/管理')+(mm.mainSkill?' · '+esc(mm.mainSkill):'')+'）</option>';});
+html+='</select></div>';
 html+='<div class="flex gap-8"><button class="btn btn-primary btn-sm" onclick="saveNewTask()">确认</button><button class="btn btn-ghost btn-sm" onclick="cancelAddTask()">取消</button></div></div>';
 }
 html+='<div class="card card-pad mb-12"><div class="flex justify-between items-center"><span class="font-600">任务完成 '+doneCount+'/'+taskCount+'</span>'+(isAdmin()?'<button class="btn btn-ghost btn-sm" onclick="addTask('+p.id+')">'+I.plus+'添加</button>':'')+'</div><div class="progress-bar mt-8" style="height:6px"><div class="fill" style="width:'+(taskCount>0?Math.round(doneCount/taskCount*100):0)+'%"></div></div></div>';
@@ -2148,6 +2165,7 @@ html+='<div class="info-row"><span class="label">所属部门</span><span class=
 html+='<div class="info-row"><span class="label">参与类型</span><span class="value">'+esc(m.type)+'</span></div>';
 html+='<div class="info-row"><span class="label">当前状态</span><span class="value">'+m.status+'</span></div>';
 html+='<div class="info-row"><span class="label">考试暂停</span><span class="value">'+esc(m.examPause)+'</span></div>';
+if(m.device)html+='<div class="info-row"><span class="label">个人设备</span><span class="value">'+esc(m.device)+'</span></div>';
 html+='</div>';
 html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">技能与能力</div>';
 html+='<div class="info-row"><span class="label">主技能</span><span class="value">'+esc(m.mainSkill)+'</span></div>';
@@ -2160,6 +2178,17 @@ html+='<div class="info-row"><span class="label">每周可投入</span><span cla
 html+='<div class="info-row"><span class="label">可用时段</span><span class="value">'+esc(m.avail)+'</span></div>';
 html+='<div class="info-row"><span class="label">完整拍摄</span><span class="value">'+(m.canFullShoot?'可以':'只能部分时段')+'</span></div>';
 html+='<div class="info-row"><span class="label">当前项目数</span><span class="value" style="color:'+(m.currentProjects>=2?'var(--danger)':'inherit')+'">'+m.currentProjects+(m.currentProjects>=2?'（负载较高）':'')+'</span></div>';
+html+='</div>';
+/* 数据联动：参与项目 + 打卡统计 */
+var myProjects=DATA.projects.filter(function(p){return (p.crew||[]).some(function(cm){return cm.name===m.name;});});
+var myCheckins=(DATA.checkins||[]).filter(function(c){return c.member===m.name;});
+html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="font-600 mb-8">数据联动</div>';
+html+='<div class="info-row"><span class="label">参与项目</span><span class="value">'+(myProjects.length>0?myProjects.map(function(p){return '<span class="badge st-blue" style="cursor:pointer;margin:2px" onclick="closeModal();openProject('+p.id+')">'+esc(p.title)+'</span>';}).join(''):'<span class="text-t2">暂无参与项目</span>')+'</span></div>';
+html+='<div class="info-row"><span class="label">打卡次数</span><span class="value">'+myCheckins.length+' 次</span></div>';
+if(myCheckins.length>0){
+var lastC=myCheckins[myCheckins.length-1];
+html+='<div class="info-row"><span class="label">最近打卡</span><span class="value">'+esc(lastC.refName||'-')+' · '+esc(lastC.date)+' '+esc(lastC.time)+'</span></div>';
+}
 html+='</div>';
 if(m.trainings&&m.trainings.length>0){
 html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">培训记录</div>';
