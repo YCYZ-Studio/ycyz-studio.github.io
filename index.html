@@ -1116,6 +1116,57 @@ if(selectedProject)document.getElementById('panel-body').innerHTML=renderProject
 showToast('任务已添加'+(autoAdded?'，负责人已同步到剧组':''));
 };
 
+/* ---- 新增成员 ---- */
+window.openAddMember=function(){
+var modal=document.getElementById('modal-content');
+var html='<div class="modal-header"><h2>添加成员</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
+html+='<div class="modal-body">';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">姓名 *</label><input id="nm-name" placeholder="如：张三"></div>';
+html+='<div class="grid grid-3 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">部门</label><select id="nm-dept"><option>台长/管理</option><option>主持部</option><option>摄影部</option><option>后期部</option><option>无</option></select></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">角色</label><select id="nm-role"><option>成员</option><option>部长</option><option>台长</option></select></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">参与类型</label><select id="nm-type"><option>核心</option><option>项目协作</option><option>特邀</option></select></div></div>';
+html+='<div class="grid grid-3 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">年级</label><input id="nm-grade" placeholder="如：高二"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">班级</label><input id="nm-class" placeholder="如：3班"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">每周可投入(h)</label><input id="nm-hours" type="number" value="10"></div></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">主技能</label><input id="nm-mainSkill" placeholder="如：相机操作/剪辑/主持"></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">备注（个人设备等）</label><input id="nm-bio" placeholder="可选"></div>';
+html+='</div>';
+html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveNewMember()">保存</button></div>';
+modal.innerHTML=html;
+document.getElementById('modal-overlay').classList.add('show');
+};
+window.saveNewMember=function(){
+var name=document.getElementById('nm-name').value.trim();
+if(!name){showToast('请填写姓名');return;}
+var deptRaw=document.getElementById('nm-dept').value;
+var dept=deptRaw==='无'?null:deptRaw;
+var maxId=DATA.members.reduce(function(m,x){return Math.max(m,x.id);},0);
+DATA.members.push({
+id:maxId+1,
+name:name,
+grade:document.getElementById('nm-grade').value.trim()||'高二',
+class:document.getElementById('nm-class').value.trim()||'',
+dept:dept,
+role:document.getElementById('nm-role').value,
+type:document.getElementById('nm-type').value,
+mainSkill:document.getElementById('nm-mainSkill').value.trim()||'待定',
+subSkills:[],
+weeklyHours:parseInt(document.getElementById('nm-hours').value,10)||10,
+status:'空闲',
+currentProjects:0,
+canProduce:false,
+needMentor:false,
+avail:'放学后',
+canFullShoot:true,
+examPause:'期末前两周',
+bio:document.getElementById('nm-bio').value.trim()||'',
+trainings:[],
+履历:[],
+评价:''
+});
+saveData();
+logAction('新增成员',name+'（'+(dept||'台长/管理')+' · '+(document.getElementById('nm-grade').value.trim()||'高二')+'）');
+closeModal();
+renderPage('members');
+showToast('成员已添加');
+};
+
 /* ---- 成员编辑 ---- */
 window.editMember=function(id){
 var m=DATA.members.find(function(x){return x.id===id;});
@@ -1974,7 +2025,11 @@ window.setMemberFilter=function(f){memberFilter=f;renderPage('dispatch');};
 function renderMembers(){
 var searchMembers=DATA.members;
 if(searchQuery){var q=searchQuery.toLowerCase();searchMembers=DATA.members.filter(function(m){return (m.name||'').toLowerCase().indexOf(q)>=0||(m.mainSkill||'').toLowerCase().indexOf(q)>=0||(m.dept||'').toLowerCase().indexOf(q)>=0;});}
-var html='<div class="filter-bar"><span class="chip '+(memberFilter==='all'?'active':'')+'" onclick="setMemberFilter2(\'all\')">全部</span><span class="chip" onclick="setMemberFilter2(\'主持部\')">主持部</span><span class="chip" onclick="setMemberFilter2(\'摄影部\')">摄影部</span><span class="chip" onclick="setMemberFilter2(\'后期部\')">后期部</span><span class="chip" onclick="setMemberFilter2(\'台长\')">台长</span><span class="chip" onclick="setMemberFilter2(\'特邀\')">特邀</span></div>';
+var html='<div class="flex justify-between items-center mb-12" style="flex-wrap:wrap;gap:8px"><div class="filter-bar" style="margin-bottom:0">';
+html+='<span class="chip '+(memberFilter==='all'?'active':'')+'" onclick="setMemberFilter2(\'all\')">全部</span><span class="chip" onclick="setMemberFilter2(\'主持部\')">主持部</span><span class="chip" onclick="setMemberFilter2(\'摄影部\')">摄影部</span><span class="chip" onclick="setMemberFilter2(\'后期部\')">后期部</span><span class="chip" onclick="setMemberFilter2(\'台长\')">台长</span><span class="chip" onclick="setMemberFilter2(\'特邀\')">特邀</span>';
+html+='</div>';
+if(isAdmin())html+='<button class="btn btn-primary btn-sm" onclick="openAddMember()">'+I.plus+'添加成员</button>';
+html+='</div>';
 html+='<div class="table-wrap"><table class="table"><thead><tr><th>姓名</th><th>年级</th><th>部门</th><th>角色</th><th>参与类型</th><th>主技能</th><th>状态</th><th>项目</th><th>周时间</th></tr></thead><tbody>';
 searchMembers.filter(function(m){
 if(memberFilter==='all')return true;
