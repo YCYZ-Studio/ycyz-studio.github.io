@@ -598,7 +598,8 @@ members:[
 {id:9,name:'欧阳浩宇',grade:'高二',class:'3班',dept:'摄影部',role:'成员',type:'核心',mainSkill:'相机操作',subSkills:[],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部成员'
 ,device:'Insta360 Ace Pro 2',trainings:[],履历:[],评价:''},
 {id:10,name:'邹昱瑾',grade:'高二',class:'4班',dept:'摄影部',role:'成员',type:'核心',mainSkill:'相机操作',subSkills:[],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部成员'
-,device:'DJI Pocket 3',trainings:[],履历:[],评价:''}
+,device:'DJI Pocket 3',trainings:[],履历:[],评价:''},
+{id:11,name:'余颖',grade:'老师',class:'-',dept:null,role:'指导老师',isAdmin:true,type:'特邀',mainSkill:'教学指导',subSkills:[],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'按需',canFullShoot:false,examPause:'无',bio:'电视台指导老师',trainings:[],履历:[],评价:''}
 ],
 creatives:[
 ],
@@ -796,7 +797,22 @@ var checkinUserId=null;
 var checkinDate=null;
 /* 身份模式：admin=管理员（电视台电脑/老师） member=成员（个人查看） */
 var userMode='member';
+/* 多管理员：台长 / 创始人 / 老师，各自独立密码（可在设置中修改，存 localStorage 覆盖） */
+var ADMIN_PASSES={台长:'ycyz1938',创始人:'ycyz1938',老师:'ycyz1938'};
 var ADMIN_PASS='ycyz1938';
+var adminIdentity='台长';
+try{var _ai=localStorage.getItem('wb_admin_identity');if(_ai&&ADMIN_PASSES[_ai])adminIdentity=_ai;}catch(_e){}
+try{var _ap=JSON.parse(localStorage.getItem('wb_admin_passes')||'null');if(_ap&&_ap.台长)ADMIN_PASSES.台长=_ap.台长;if(_ap&&_ap.创始人)ADMIN_PASSES.创始人=_ap.创始人;if(_ap&&_ap.老师)ADMIN_PASSES.老师=_ap.老师;}catch(_e2){}
+/* 当前管理员姓名（按身份） */
+function currentAdminName(){
+var map={台长:'台长',创始人:'创始人',老师:'余颖'};
+var m=(DATA.members||[]).find(function(x){return x.isAdmin&&x.role==='台长';});
+var name=map[adminIdentity]||'管理员';
+if(adminIdentity==='台长'&&m)name=m.name;
+var f=(DATA.members||[]).find(function(x){return x.role==='创始人';});
+if(adminIdentity==='创始人'&&f)name=f.name;
+return name;
+}
 var lastExport=null;
 
 /* ===== Utils ===== */
@@ -822,8 +838,7 @@ DATA.logs=DATA.logs||[];
 var now=new Date();
 var pad=function(n){return n<10?'0'+n:''+n;};
 var ts=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
-var adminMember=(DATA.members||[]).find(function(m){return m.isAdmin;});
-var who=isAdmin()?(adminMember?adminMember.name:'管理员'):'成员';
+var who=isAdmin()?currentAdminName():'成员';
 DATA.logs.push({id:(DATA.logs.reduce(function(a,l){return Math.max(a,l.id||0);},0)+1),time:ts,who:who,action:action,detail:detail||''});
 if(DATA.logs.length>500)DATA.logs=DATA.logs.slice(-500);
 saveData();
@@ -1015,20 +1030,24 @@ return;
 }
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>进入管理员模式</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
-html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入管理员口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">电视台电脑默认管理员模式；个人端请输入口令进入管理。</div></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="台长">台长</option><option value="创始人">创始人</option><option value="老师">老师（指导）</option></select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">台长/创始人/老师口令各自独立；默认均为 ycyz1938，可在设置中修改。</div></div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
 setTimeout(function(){var i=document.getElementById('role-pass');if(i)i.focus();},100);
 };
 window.tryAdmin=function(){
+var idSel=document.getElementById('role-identity');
+var identity=idSel?idSel.value:'台长';
 var i=document.getElementById('role-pass');
 var val=i?i.value.trim():'';
 if(!val){showToast('请输入管理员口令');return;}
-if(val===ADMIN_PASS){
+if(val===ADMIN_PASSES[identity]){
+adminIdentity=identity;
+try{localStorage.setItem('wb_admin_identity',identity);}catch(_e){}
 closeModal();
 setRole('admin');
-showToast('口令正确，已进入管理员模式');
+showToast(identity+'口令正确，已进入管理员模式');
 }else{
 showToast('口令错误');
 }
@@ -1049,8 +1068,7 @@ if(checkinBtn)checkinBtn.style.display=admin?'inline-flex':'none';
 var su=document.getElementById('sidebar-user');
 if(su){
 var nm=su.querySelector('.name'),rl=su.querySelector('.role');
-var adminMember=(DATA.members||[]).find(function(m){return m.isAdmin;});
-if(nm)nm.textContent=admin?(adminMember?adminMember.name:'管理员'):'校园电视台';
+if(nm)nm.textContent=admin?currentAdminName():'校园电视台';
 if(rl)rl.textContent=admin?'管理员 · 管理全部数据':'成员模式 · 查看参与';
 }
 }
@@ -1105,7 +1123,7 @@ var d=new Date();
 var pad=function(n){return n<10?'0'+n:''+n;};
 var created=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 var maxId=DATA.creatives.reduce(function(m,c){return Math.max(m,c.id||0);},0);
-var who=(function(){var a=(DATA.members||[]).find(function(x){return x.isAdmin;});return a?a.name:(isAdmin()?'管理员':'成员');})();
+var who=isAdmin()?currentAdminName():'成员';
 DATA.creatives.push({
 id:maxId+1,
 title:title,
@@ -1287,7 +1305,7 @@ var eid=parseInt(sel?sel.value:'',10);
 var e=(DATA.equipment||[]).find(function(x){return x.id===eid;});
 if(!e){showToast('请选择设备');return;}
 if(e.status!=='可用'){showToast('该设备已被占用');return;}
-var adminName=(function(){var a=(DATA.members||[]).find(function(m){return m.isAdmin;});return a?a.name:'管理员';})();
+var adminName=currentAdminName();
 e.status='借用中';e.projectId=p.id;e.project=p.title;e.borrower=adminName;e.returnDate='';
 saveData();
 logAction('安排设备','「'+p.title+'」安排设备 '+e.name);
@@ -2152,8 +2170,8 @@ return '';
 window.projectAction=function(action,id){
 var p=DATA.projects.find(function(x){return x.id===id;});
 if(!p)return;
-/* 审核真实记录：操作人 = 当前管理员 */
-var adminName=(function(){var a=(DATA.members||[]).find(function(m){return m.isAdmin;});return a?a.name:'管理员';})();
+/* 审核真实记录：操作人 = 当前管理员身份 */
+var adminName=currentAdminName();
 var now=new Date();
 var pad=function(n){return n<10?'0'+n:''+n;};
 var todayStrNow=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
