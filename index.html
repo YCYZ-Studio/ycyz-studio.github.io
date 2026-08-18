@@ -410,9 +410,9 @@ input,textarea,select{font-size:16px}
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
     <div class="sidebar-footer">
-      <div class="user-card">
-        <div class="avatar">陈</div>
-        <div class="info"><div class="name">陈思远</div><div class="role">台长 · 高三</div></div>
+      <div class="user-card" id="sidebar-user">
+        <div class="avatar">台</div>
+        <div class="info"><div class="name">校园电视台</div><div class="role" id="sidebar-user-mode">成员模式</div></div>
       </div>
       <div class="divider" style="margin:8px 0"></div>
       <div id="admin-tools" class="flex gap-8" style="flex-wrap:wrap">
@@ -659,6 +659,7 @@ function mergeData(parsed){
     for(var f in sampleP){if(p[f]===undefined)p[f]=JSON.parse(JSON.stringify(sampleP[f]));}
     if(!Array.isArray(p.crew))p.crew=[];
     if(!Array.isArray(p.tasks))p.tasks=[];
+    if(!Array.isArray(p.reviews))p.reviews=[];
     if(typeof p.id!=='number'||isNaN(p.id))p.id=0;
     return p;
   });
@@ -1014,6 +1015,14 @@ badge.className='role-badge'+(admin?' role-admin':'');
 }
 var checkinBtn=document.getElementById('topbar-checkin');
 if(checkinBtn)checkinBtn.style.display=admin?'inline-flex':'none';
+/* 侧边栏用户卡动态化 */
+var su=document.getElementById('sidebar-user');
+if(su){
+var nm=su.querySelector('.name'),rl=su.querySelector('.role');
+var adminMember=(DATA.members||[]).find(function(m){return m.isAdmin;});
+if(nm)nm.textContent=admin?(adminMember?adminMember.name:'管理员'):'校园电视台';
+if(rl)rl.textContent=admin?'管理员 · 管理全部数据':'成员模式 · 查看参与';
+}
 }
 window.confirmOk=function(){
 var fn=window._confirmFn;
@@ -1111,7 +1120,8 @@ platform:platform,
 risk:null,
 wfStep:3,
 crew:[],
-tasks:[]
+tasks:[],
+reviews:[]
 });
 saveData();
 closeModal();
@@ -2038,13 +2048,10 @@ html+='</div></div>';
 return html;
 }
 if(tab==='review'){
-var html='<div class="card card-pad mb-12"><div class="font-600 mb-12">审核记录</div>';
-var reviews=[];
-if(p.wfStep>=3)reviews.push({step:'台长审核',result:p.status==='已拒绝'?'已拒绝':'已通过',by:'陈思远(台长)',date:p.deadline});
-if(p.wfStep>=4)reviews.push({step:'授权制片',result:'已授权',by:'陈思远(台长)',date:p.deadline});
-if(p.wfStep>=9)reviews.push({step:'审核发布',result:p.status==='修改中'?'退回修改':p.status==='已发布'||p.status==='待复盘'||p.status==='已归档'?'已发布':'审核中',by:'陈思远(台长)',date:p.publishDate});
-if(reviews.length===0)html+='<div class="empty">暂无审核记录</div>';
-else{reviews.forEach(function(r){var cls=r.result.indexOf('通过')>=0||r.result.indexOf('授权')>=0?'st-green':'st-orange';html+='<div class="info-row"><span class="label">'+r.step+'</span><span class="flex items-center gap-8"><span class="badge '+cls+'">'+r.result+'</span><span class="text-sm text-t2">'+r.by+'</span></span></div>';});}
+var html='<div class="card card-pad mb-12"><div class="font-600 mb-12">审核记录（真实操作流水）</div>';
+var reviews=p.reviews||[];
+if(reviews.length===0)html+='<div class="empty">暂无审核记录——执行审核操作后这里会记录每一步的真实结果</div>';
+else{reviews.slice().reverse().forEach(function(r){var cls=r.result.indexOf('通过')>=0||r.result.indexOf('授权')>=0||r.result.indexOf('发布')>=0?'st-green':'st-orange';html+='<div class="info-row"><span class="label">'+esc(r.step)+'</span><span class="flex items-center gap-8"><span class="badge '+cls+'">'+esc(r.result)+'</span><span class="text-sm text-t2">'+esc(r.by)+' · '+esc(r.date)+'</span></span></div>';});}
 html+='</div>';
 html+='<div class="card card-pad"><div class="font-600 mb-12">审核要点</div>';
 html+='<div class="text-sm text-t2" style="line-height:1.8">';
@@ -2061,19 +2068,25 @@ return '';
 window.projectAction=function(action,id){
 var p=DATA.projects.find(function(x){return x.id===id;});
 if(!p)return;
+/* 审核真实记录：操作人 = 当前管理员 */
+var adminName=(function(){var a=(DATA.members||[]).find(function(m){return m.isAdmin;});return a?a.name:'管理员';})();
+var now=new Date();
+var pad=function(n){return n<10?'0'+n:''+n;};
+var todayStrNow=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+function addReview(step,result){p.reviews=p.reviews||[];p.reviews.push({step:step,result:result,by:adminName,date:todayStrNow});}
 var logMap={
 approve:'批准立项',return:'退回修改',reject:'拒绝立项',authorize:'授权制片',passRough:'通过初剪',returnRough:'退回初剪',passFinal:'通过终审',returnFinal:'退回终审',publish:'发布项目',retro:'填写复盘',archive:'归档项目'
 };
 var actions={
-approve:function(){p.status='待授权制片';p.wfStep=4;showToast('已批准立项「'+p.title+'」');},
-return:function(){p.status='退回修改';p.wfStep=2;showToast('已退回修改「'+p.title+'」');},
-reject:function(){p.status='已拒绝';p.wfStep=3;showToast('已拒绝项目「'+p.title+'」');},
-authorize:function(){p.status='待部长调度';p.wfStep=5;p.producer=p.producer==='待授权'||p.producer==='待定'?'待分配(台长授权)':p.producer;showToast('已授权制片人');},
-passRough:function(){p.status='修改中';p.wfStep=9;showToast('初剪审核通过，进入修改');},
-returnRough:function(){p.status='修改中';p.wfStep=9;showToast('已退回修改');},
-passFinal:function(){p.status='待发布';p.wfStep=9;showToast('最终审核通过');},
-returnFinal:function(){p.status='修改中';p.wfStep=9;showToast('已退回修改');},
-publish:function(){p.status='已发布';p.wfStep=9;p.progress=100;showToast('已发布到'+p.platform);},
+approve:function(){p.status='待授权制片';p.wfStep=4;addReview('台长审核','已通过');showToast('已批准立项「'+p.title+'」');},
+return:function(){p.status='退回修改';p.wfStep=2;addReview('台长审核','退回修改');showToast('已退回修改「'+p.title+'」');},
+reject:function(){p.status='已拒绝';p.wfStep=3;addReview('台长审核','已拒绝');showToast('已拒绝项目「'+p.title+'」');},
+authorize:function(){p.status='待部长调度';p.wfStep=5;p.producer=p.producer==='待授权'||p.producer==='待定'?'待分配(台长授权)':p.producer;addReview('授权制片','已授权 '+p.producer);showToast('已授权制片人');},
+passRough:function(){p.status='修改中';p.wfStep=9;addReview('初剪审核','已通过');showToast('初剪审核通过，进入修改');},
+returnRough:function(){p.status='修改中';p.wfStep=9;addReview('初剪审核','退回修改');showToast('已退回修改');},
+passFinal:function(){p.status='待发布';p.wfStep=9;addReview('最终审核','已通过');showToast('最终审核通过');},
+returnFinal:function(){p.status='修改中';p.wfStep=9;addReview('最终审核','退回修改');showToast('已退回修改');},
+publish:function(){p.status='已发布';p.wfStep=9;p.progress=100;addReview('审核发布','已发布到 '+p.platform);showToast('已发布到'+p.platform);},
 retro:function(){openRetrospective(p.id);},
 archive:function(){p.status='已归档';p.wfStep=10;(p.crew||[]).forEach(function(cm){var mm=DATA.members.find(function(x){return x.name===cm.name;});if(mm){mm.currentProjects=Math.max(0,(mm.currentProjects||0)-1);if(mm.currentProjects===0)mm.status='空闲';}});p.crew=[];showToast('已归档，剧组已解散');}
 };
@@ -2336,7 +2349,7 @@ if(!isAdmin()){showToast('仅管理员可转立项');return;}
 var maxId=DATA.projects.reduce(function(m,p){return Math.max(m,p.id||0);},0);
 var src=c.source==='学校立项'?'学校立项':c.source==='自主立项'?'自主立项':'联合立项';
 DATA.projects.push({
-id:maxId+1,title:c.title,source:src,level:'标准',producer:'待授权',partner:c.submitter||'无',status:'待立项审核',progress:0,publishDate:c.hopeDate||'',crewSize:0,type:'专题',deadline:'',platform:'抖音',risk:null,wfStep:3,crew:[],tasks:[]
+id:maxId+1,title:c.title,source:src,level:'标准',producer:'待授权',partner:c.submitter||'无',status:'待立项审核',progress:0,publishDate:c.hopeDate||'',crewSize:0,type:'专题',deadline:'',platform:'抖音',risk:null,wfStep:3,crew:[],tasks:[],reviews:[]
 });
 c.status='已立项';
 logAction('创意转立项','「'+c.title+'」由创意转为立项申请（'+src+'）');
@@ -2685,7 +2698,7 @@ var html='<div class="modal-header"><h2>'+(mt?'编辑会议':'新建会议')+'</
 html+='<div class="modal-body">';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">会议名称</label><input id="mt-name" value="'+(mt?esc(mt.name):'')+'" placeholder="如：周例会"></div>';
 html+='<div class="grid grid-2 mb-12"><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">周期 / 日期</label><input id="mt-date" value="'+(mt?esc(mt.date):'每周一')+'"></div><div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">时间</label><input id="mt-time" value="'+(mt?esc(mt.time):'17:30')+'" placeholder="如 17:30"></div></div>';
-html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">主持人</label><input id="mt-host" value="'+(mt?esc(mt.host):'')+'" placeholder="如：陈思远"></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">主持人</label><input id="mt-host" value="'+(mt?esc(mt.host):'')+'" placeholder="如：陈奕多"></div>';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">说明</label><input id="mt-note" value="'+(mt?esc(mt.note):'')+'" placeholder="可选"></div>';
 html+='</div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveMeeting('+(id||0)+')">保存</button></div>';
