@@ -603,8 +603,8 @@ members:[
 {id:10,name:'邹昱瑾',grade:'高二',class:'4班',dept:'摄影部',role:'成员',type:'核心',mainSkill:'相机操作',subSkills:[],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部成员'
 ,device:'DJI Pocket 3',trainings:[],履历:[],评价:''},
 {id:11,name:'余颖',grade:'老师',class:'-',dept:null,role:'指导老师',isAdmin:true,type:'特邀',mainSkill:'教学指导',subSkills:[],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'按需',canFullShoot:false,examPause:'无',bio:'电视台指导老师',trainings:[],履历:[],评价:''},
-{id:12,name:'万雨恒',grade:'青岛电影学院',class:'已毕业',dept:null,role:'创始人',isAdmin:true,type:'特邀',mainSkill:'电影摄影',subSkills:['摄影','灯光'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:true,examPause:'无',bio:'创始人学长 · 青岛电影学院 电影摄影',contact:'待补充',trainings:[],履历:[],评价:''},
-{id:13,name:'易汉武',grade:'山西电影学院',class:'已毕业',dept:null,role:'创始人',isAdmin:true,type:'特邀',mainSkill:'电影学',subSkills:['编导','策划'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:false,examPause:'无',bio:'创始人学长 · 山西电影学院 电影学',contact:'18827844021（微信同号）',trainings:[],履历:[],评价:''}
+{id:12,name:'万雨恒',account:'WANYUHENG',grade:'青岛电影学院',class:'已毕业',dept:null,role:'创始人',isAdmin:true,type:'特邀',mainSkill:'电影摄影',subSkills:['摄影','灯光'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:true,examPause:'无',bio:'创始人学长 · 青岛电影学院 电影摄影',contact:'待补充',trainings:[],履历:[],评价:''},
+{id:13,name:'易汉武',account:'YIHANWU',grade:'山西电影学院',class:'已毕业',dept:null,role:'创始人',isAdmin:true,type:'特邀',mainSkill:'电影学',subSkills:['编导','策划'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:false,examPause:'无',bio:'创始人学长 · 山西电影学院 电影学',contact:'18827844021（微信同号）',trainings:[],履历:[],评价:''}
 ],
 creatives:[
 ],
@@ -814,7 +814,7 @@ var map={台长:'台长',老师:'余颖'};
 var m=(DATA.members||[]).find(function(x){return x.isAdmin&&x.role==='台长';});
 var name=map[adminIdentity]||adminIdentity||'管理员';
 if(adminIdentity==='台长'&&m)name=m.name;
-var fm=(DATA.members||[]).find(function(x){return x.name===adminIdentity;});
+var fm=(DATA.members||[]).find(function(x){return x.name===adminIdentity||x.account===adminIdentity;});
 if(fm)name=fm.name;
 return name;
 }
@@ -1055,7 +1055,7 @@ return;
 }
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>进入管理员模式</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
-html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.name)+'">创始人 · '+esc(f.name)+'（学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">台长/老师/创始人（学长）口令各自独立；默认均为 ycyz1938，可在设置中修改。</div></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.account||f.name)+'">创始人 · '+esc(f.account||f.name)+'（'+esc(f.name)+'学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">台长/老师/创始人（学长）口令各自独立；默认均为 ycyz1938，可在设置中修改。</div></div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
