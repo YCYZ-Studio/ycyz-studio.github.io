@@ -565,9 +565,9 @@ var WF_STEPS=[
 /* ===== Data ===== */
 var DATA={
 departments:[
-{id:'host',name:'主持部',head:'林小雅',color:'#8b5cf6',skills:['主持','采访','配音','表演','文案','采访提纲','基础策划']},
-{id:'camera',name:'摄影部',head:'王浩然',color:'#06b6d4',skills:['相机操作','构图','曝光对焦','镜头设计','灯光','现场收音','稳定器','多机位','设备管理','素材管理','摄影助理','录音助理']},
-{id:'post',name:'后期部',head:'赵明轩',color:'#f59e0b',skills:['基础剪辑','采访剪辑','剧情剪辑','调色','字幕','声音后期','包装','特效','封面','横竖屏适配','文件输出','工程归档']}
+{id:'host',name:'主持部',head:'待定',color:'#8b5cf6',skills:['主持','采访','配音','表演','文案','采访提纲','基础策划']},
+{id:'camera',name:'摄影部',head:'待定',color:'#06b6d4',skills:['相机操作','构图','曝光对焦','镜头设计','灯光','现场收音','稳定器','多机位','设备管理','素材管理','摄影助理','录音助理']},
+{id:'post',name:'后期部',head:'待定',color:'#f59e0b',skills:['基础剪辑','采访剪辑','剧情剪辑','调色','字幕','声音后期','包装','特效','封面','横竖屏适配','文件输出','工程归档']}
 ],
 members:[
 {id:1,name:'陈奕多',grade:'高二',class:'4班',dept:null,role:'台长',isAdmin:true,type:'核心',mainSkill:'制片',subSkills:['策划','导演'],weeklyHours:15,status:'空闲',currentProjects:1,canProduce:true,needMentor:false,avail:'周一至周五放学后',canFullShoot:true,examPause:'无',bio:'电视台台长，管理员，统筹全局',trainings:[],履历:[],评价:'统筹能力强'},
@@ -622,7 +622,7 @@ logs:[]
 var DEMO_DATA=JSON.parse(JSON.stringify(DATA));
 var LS_KEY='wb_campus_tv_data';
 var LS_BACKUP_KEY='wb_campus_tv_data_bak';
-var DATA_VERSION=3;
+var DATA_VERSION=4;
 /* localStorage 可用性检测（隐私模式/禁用存储时降级为内存模式） */
 var STORAGE_OK=(function(){try{localStorage.setItem('__wb_t','1');localStorage.removeItem('__wb_t');return true;}catch(e){return false;}})();
 var _saveFailShown=false;
@@ -720,6 +720,11 @@ function migrateData(){
   /* 版本字段：旧数据无 version → 视为 0，逐步升级 */
   if(typeof DATA.version!=='number'||DATA.version<DATA_VERSION){
     if(DATA.version===undefined||DATA.version<3){DATA.version=3;changed=true;}
+    /* v4：清除部门初始（演示）部长名，部长待安排 */
+    if(DATA.version<4){
+      (DATA.departments||[]).forEach(function(d){if(d&&['林小雅','王浩然','赵明轩'].indexOf(d.head)>=0){d.head='待定';}});
+      changed=true;
+    }
     DATA.version=DATA_VERSION;
     changed=true;
   }
@@ -2156,7 +2161,7 @@ if(memberFilter==='可Full')return m.canFullShoot;
 if(memberFilter==='制片')return m.canProduce;
 return true;
 });
-html+='<div><div class="card card-pad mb-12"><div class="flex justify-between items-center"><div class="flex items-center gap-8"><span style="width:10px;height:10px;border-radius:50%;background:'+d.color+'"></span><span class="font-600">'+d.name+'</span></div><span class="text-sm text-t2">'+members.length+'人</span></div><div class="text-sm text-t3 mt-8">部长：'+d.head+'</div></div>';
+html+='<div><div class="card card-pad mb-12"><div class="flex justify-between items-center"><div class="flex items-center gap-8"><span style="width:10px;height:10px;border-radius:50%;background:'+d.color+'"></span><span class="font-600">'+d.name+'</span></div><span class="text-sm text-t2">'+members.length+'人</span></div><div class="text-sm text-t3 mt-8">部长：'+(d.head==='待定'?'待安排（管理员可在成员档案任命）':esc(d.head))+'</div></div>';
 members.forEach(function(m){
 var st=MEMBER_STATUS[m.status]||{cls:'st-gray'};
 var loadColor=m.currentProjects>=2?'var(--danger)':'var(--text2)';
@@ -2289,7 +2294,7 @@ html+='<div class="metric"><div class="m-label">当前空闲</div><div class="m-
 html+='</div>';
 
 html+='<div class="card card-pad mb-12"><div class="section-title">'+I.user+'部长信息</div>';
-html+='<div class="flex items-center gap-12"><div style="width:44px;height:44px;border-radius:50%;background:'+dept.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">'+initials(dept.head)+'</div><div><div class="font-600">'+dept.head+'</div><div class="text-sm text-t2">'+deptName+'部长</div></div></div></div>';
+html+='<div class="flex items-center gap-12"><div style="width:44px;height:44px;border-radius:50%;background:'+dept.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">'+(dept.head==='待定'?'?':initials(dept.head))+'</div><div><div class="font-600">'+(dept.head==='待定'?'待安排':esc(dept.head))+'</div><div class="text-sm text-t2">'+deptName+'部长</div></div></div></div>';
 
 html+='<div class="card card-pad mb-12"><div class="section-title">'+I.edit+'能力标签</div><div class="tag-row">';
 dept.skills.forEach(function(s){html+='<span class="skill-tag" style="font-size:12px;padding:3px 8px">'+s+'</span>';});
