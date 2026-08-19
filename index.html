@@ -934,6 +934,7 @@ function cloudBackend(){return 'cloudbase';}
 function cloudEnabled(){return CLOUD_REPO||cloudEnvId();}
 function cloudToken(){try{return localStorage.getItem('wb_cloud_token')||'';}catch(e){return '';}}
 function cloudDeviceId(){try{var d=localStorage.getItem('wb_device_id');if(!d){d='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem('wb_device_id',d);}return d;}catch(e){return 'd'+(Date.now().toString(36));}}
+function cloudTrim(){if(!_cloudDb)return;try{_cloudDb.collection(CLOUD_COLL).limit(100).get().then(function(res){var _l=Array.isArray(res.data)?res.data:[];var _my=cloudDeviceId();var _fixed='wb-'+_my;_l.forEach(function(d){var dev=(d.data&&d.data.device)||d.device;if(dev===_my&&d._id!==_fixed){_cloudDb.collection(CLOUD_COLL).doc(d._id).remove().catch(function(){});}});}).catch(function(){});}catch(e){}}
 /* 设置后端：envId 填 → 腾讯云；空 → GitHub */
 window.setCloudEnv=function(envId){
 envId=(envId||'').trim();
@@ -956,7 +957,7 @@ html+='<div class="card card-pad mb-12" style="background:var(--primary-l);borde
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">腾讯云开发环境 ID（可选，填了切换腾讯云）</label><input id="cloud-env" value="'+esc(env)+'" placeholder="如：workbench-xxxxxx"></div>';
 
 
-html+='<div class="card card-pad" style="background:var(--warning-l);border-color:rgba(245,158,11,.15)"><div class="text-sm" style="color:#92400e;line-height:1.7">腾讯云需：注册腾讯云并实名 → 云开发控制台创建环境 → 开通「匿名登录」→ 创建集合 <strong>workbench</strong>（权限：所有用户可读，仅创建者可写）。</div></div>';
+html+='<div class="card card-pad" style="background:var(--warning-l);border-color:rgba(245,158,11,.15)"><div class="text-sm" style="color:#92400e;line-height:1.7">系统已内置腾讯云环境（默认免配置）。如需换环境：云开发控制台创建环境 → 开通「匿名登录」→ 创建集合 <strong>workbench</strong>（权限：所有用户可读，仅创建者可写即可，多设备通过各自文档自动同步）。</div></div>';
 html+='</div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveCloudCfg()">保存</button></div>';
 modal.innerHTML=html;
@@ -964,9 +965,7 @@ document.getElementById('modal-overlay').classList.add('show');
 };
 window.saveCloudCfg=function(){
 var env=(document.getElementById('cloud-env')||{}).value||'';
-var repo=(document.getElementById('cloud-repo')||{}).value||'YCYZ-Studio/campus-tv-data';
-var token=(document.getElementById('cloud-token')||{}).value||'';
-try{localStorage.setItem('wb_cloud_env',env.trim());localStorage.setItem('wb_cloud_repo',repo.trim());localStorage.setItem('wb_cloud_token',token.trim());}catch(e){}
+try{localStorage.setItem('wb_cloud_env',env.trim());}catch(e){}
 closeModal();
 setCloudEnv(env);
 };
@@ -1019,6 +1018,7 @@ localStorage.setItem(LS_KEY,JSON.stringify(DATA));
 if(cloudUpdated>0)localStorage.setItem('wb_data_updated',String(cloudUpdated));
 }catch(e){}
 cloudStatus='synced';renderCloudBadge();
+cloudTrim();
 try{renderPage(currentPage);}catch(e){}
 showToast('已同步云端数据');
 }
@@ -1085,6 +1085,7 @@ payload={json:JSON.stringify(DATA),updated:Date.now()};
 return _cloudDb.collection(CLOUD_COLL).add({data:{json:payload.json,updated:payload.updated,device:cloudDeviceId()}});
 }).then(function(){
 cloudStatus='synced';renderCloudBadge();
+cloudTrim();
 }).catch(function(e){cloudStatus='error';renderCloudBadge();console.warn('推送云端失败',e);});
 return;
 }
