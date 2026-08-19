@@ -851,76 +851,55 @@ saveData();
 }catch(e){}
 }
 
-/* ===== Cloud Sync（腾讯云 CloudBase，多端同步） ===== */
-var CLOUD_ENV=''; // 腾讯云开发环境 ID，填写后自动开启云同步
-var CLOUD_COLL='workbench';
-var CLOUD_DOC='workbench-data';
+/* ===== Cloud Sync（GitHub 数据仓库，多端同步） ===== */
+/* 数据仓库：YCYZ-Studio/campus-tv-data · data.json；公开可读，写需 Token */
+var CLOUD_REPO=''; // GitHub 数据仓库，如 YCYZ-Studio/campus-tv-data
+var CLOUD_BRANCH='main';
 var cloudStatus='off'; // off | connecting | synced | error
-var _cloudApp=null,_cloudDb=null,_pushTimer=null;
-function cloudEnabled(){return CLOUD_ENV||(function(){try{return localStorage.getItem('wb_cloud_env')||'';}catch(e){return '';}})();}
-window.setCloudEnv=function(envId){
-envId=(envId||'').trim();
+var _pushTimer=null;
+function cloudEnabled(){return CLOUD_REPO||(function(){try{return localStorage.getItem('wb_cloud_repo')||'';}catch(e){return '';}})();}
+function cloudToken(){try{return localStorage.getItem('wb_cloud_token')||'';}catch(e){return '';}}
+window.setCloudEnv=function(repo,token){
+repo=(repo||'').trim();
 try{
-if(envId){localStorage.setItem('wb_cloud_env',envId);CLOUD_ENV=envId;}
-else{localStorage.removeItem('wb_cloud_env');CLOUD_ENV='';}
-}catch(e){CLOUD_ENV=envId;}
-initCloud();
-renderCloudBadge();
-showToast(envId?'云端已配置，正在连接...':'已关闭云端同步');
+if(repo){localStorage.setItem('wb_cloud_repo',repo);CLOUD_REPO=repo;}
+else{localStorage.removeItem('wb_cloud_repo');CLOUD_REPO='';}
+if(token!==undefined)localStorage.setItem('wb_cloud_token',(token||'').trim());
+}catch(e){CLOUD_REPO=repo;}
+if(CLOUD_REPO){cloudStatus='connecting';renderCloudBadge();cloudPull();}
+else{cloudStatus='off';renderCloudBadge();}
+showToast(repo?'云端已配置，正在连接...':'已关闭云端同步');
 };
 window.askCloudConfig=function(){
-var env=cloudEnabled();
+var repo=cloudEnabled();
+var token=cloudToken();
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>云端同步设置</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
 html+='<div class="modal-body">';
-html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">腾讯云开发环境 ID（envId）</label><input id="cloud-env" value="'+esc(env)+'" placeholder="如：workbench-xxxxxx"></div>';
-html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary);line-height:1.7">开启后：数据保存时自动上传云端，打开时自动拉取最新，多台设备共用一份数据。需先在腾讯云开发控制台：① 创建环境拿到 envId ② 开启「匿名登录」③ 数据库集合 <strong>workbench</strong> 权限设为「所有用户可读，仅创建者可写」。不填则保持本地模式。</div></div>';
-html+='<div class="flex gap-8"><button class="btn btn-ghost" onclick="setCloudEnv(\'\')">关闭云端</button><button class="btn btn-primary" onclick="saveCloudEnv()">保存并连接</button></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">数据仓库（GitHub）</label><input id="cloud-env" value="'+esc(repo)+'" placeholder="如：YCYZ-Studio/campus-tv-data"></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">写入令牌 Token（可选，不填=只读拉取）</label><input id="cloud-token" type="password" value="'+esc(token)+'" placeholder="GitHub Personal Access Token"></div>';
+html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary);line-height:1.7">开启后：打开页面自动拉取云端最新数据；配置令牌后保存时自动上传，多台设备共用一份数据。<br><br>令牌获取：GitHub → Settings → Developer settings → Personal access tokens → 勾选 repo 权限生成（仅本机保存，不会上传）。</div></div>';
+html+='<div class="flex gap-8"><button class="btn btn-ghost" onclick="setCloudEnv(&quot;&quot;,&quot;&quot;)">关闭云端</button><button class="btn btn-primary" onclick="saveCloudEnv()">保存并连接</button></div>';
 html+='</div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
 };
 window.saveCloudEnv=function(){
 var v=document.getElementById('cloud-env').value.trim();
+var t=document.getElementById('cloud-token').value.trim();
 closeModal();
-setCloudEnv(v);
+setCloudEnv(v,t);
 };
-function loadCloudSDK(){
-if(window.cloudbase){initCloud();return;}
-if(document.getElementById('cloudbase-sdk'))return;
-if(!cloudEnabled()){cloudStatus='off';renderCloudBadge();return;}
-var s=document.createElement('script');
-s.id='cloudbase-sdk';
-s.src='https://static.cloudbase.net/cloudbase-js-sdk/2.17.3/cloudbase.full.js';
-s.onload=function(){initCloud();};
-s.onerror=function(){cloudStatus='off';renderCloudBadge();};
-if(document.head)document.head.appendChild(s);
-}
-function initCloud(){
-var env=cloudEnabled();
-if(!env){cloudStatus='off';renderCloudBadge();return;}
-if(!window.cloudbase){loadCloudSDK();return;}
-try{
-cloudStatus='connecting';renderCloudBadge();
-_cloudApp=window.cloudbase.init({env:env});
-_cloudDb=_cloudApp.database();
-_cloudApp.auth().signInAnonymously().then(function(){
-cloudStatus='synced';renderCloudBadge();
-cloudPull();
-}).catch(function(e){
-cloudStatus='error';renderCloudBadge();console.warn('CloudBase 登录失败',e);
-});
-}catch(e){cloudStatus='error';renderCloudBadge();console.warn('CloudBase 初始化失败',e);}
-}
 function cloudPull(){
-if(!_cloudDb||!cloudEnabled())return;
-_cloudDb.collection(CLOUD_COLL).doc(CLOUD_DOC).get().then(function(res){
-if(res&&res.data&&res.data.json){
-try{
-var parsed=JSON.parse(res.data.json);
+var repo=cloudEnabled();
+if(!repo){cloudStatus='off';renderCloudBadge();return;}
+fetch('https://raw.githubusercontent.com/'+repo+'/'+CLOUD_BRANCH+'/data.json',{cache:'no-store'}).then(function(r){
+if(!r.ok)throw new Error('HTTP '+r.status);
+return r.json();
+}).then(function(obj){
+var parsed=obj&&obj.d?obj.d:obj;
+var cloudUpdated=Number(obj&&obj.updated)||0;
 if(parsed&&isValidData(parsed)){
-/* 时间戳保护：云端比本地旧则不覆盖（防多端回滚） */
-var cloudUpdated=Number(res.data.updated)||0;
 var localUpdated=Number(localStorage.getItem('wb_data_updated'))||0;
 if(cloudUpdated>0&&localUpdated>0&&cloudUpdated<localUpdated){cloudStatus='synced';renderCloudBadge();return;}
 DATA=mergeData(parsed);
@@ -933,20 +912,32 @@ cloudStatus='synced';renderCloudBadge();
 try{renderPage(currentPage);}catch(e){}
 showToast('已同步云端数据');
 }
-}catch(e){cloudStatus='error';renderCloudBadge();}
-}
 }).catch(function(e){cloudStatus='error';renderCloudBadge();console.warn('拉取云端失败',e);});
 }
 function cloudPush(){
-if(!_cloudDb||!cloudEnabled())return;
+var repo=cloudEnabled(), token=cloudToken();
+if(!repo||!token)return; /* 无令牌只读 */
 clearTimeout(_pushTimer);
 _pushTimer=setTimeout(function(){
 try{
-var payload={json:JSON.stringify(DATA),updated:Date.now()};
-_cloudDb.collection(CLOUD_COLL).doc(CLOUD_DOC).set(payload).then(function(){
-cloudStatus='synced';renderCloudBadge();
+var payload={d:DATA,updated:Date.now()};
+var json=JSON.stringify(payload);
+var b64=btoa(unescape(encodeURIComponent(json)));
+fetch('https://api.github.com/repos/'+repo+'/contents/data.json',{headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
+return r.ok?r.json():{};
+}).then(function(info){
+var body={message:'sync '+new Date().toISOString().slice(0,19),content:b64};
+if(info&&info.sha)body.sha=info.sha;
+return fetch('https://api.github.com/repos/'+repo+'/contents/data.json',{
+method:'PUT',
+headers:{'Accept':'application/vnd.github+json','Authorization':'token '+token,'Content-Type':'application/json'},
+body:JSON.stringify(body)
+});
+}).then(function(r){
+if(r.ok){cloudStatus='synced';renderCloudBadge();}
+else{cloudStatus='error';renderCloudBadge();console.warn('推送云端失败',r.status);}
 }).catch(function(e){cloudStatus='error';renderCloudBadge();console.warn('推送云端失败',e);});
-}catch(e){}
+}catch(e){console.warn('cloudPush',e);}
 },2000);
 }
 function renderCloudBadge(){
@@ -956,8 +947,8 @@ var map={off:{t:'本地模式',c:'var(--text3)'},connecting:{t:'连接云端...'
 var m=map[cloudStatus]||map.off;
 b.textContent=m.t;
 b.style.color=m.c;
-var env=cloudEnabled();
-b.title=env?('环境: '+env):'未配置云端 · 点击设置';
+var repo=cloudEnabled();
+b.title=repo?('仓库: '+repo):'未配置云端 · 点击设置';
 }
 function statusBadge(s){var c=ST[s]||{cls:'st-gray'};return '<span class="badge '+c.cls+'"><span class="dot"></span>'+esc(s)+'</span>';}
 function levelBadge(l){var c=LEVEL[l]||LEVEL['小型'];return '<span class="badge '+c.cls+'">'+esc(l)+'</span>';}
@@ -3279,7 +3270,7 @@ applyRoleUI();
 try{renderSidebar();}catch(e){console.error('renderSidebar失败',e);}
 /* 云端同步初始化（配置了 envId 才会连接） */
 renderCloudBadge();
-try{loadCloudSDK();}catch(e){console.error('loadCloudSDK失败',e);}
+try{cloudPull();}catch(e){console.error('cloudPull失败',e);}
 /* 备份提醒：距上次导出超过 7 天且存在数据时提示（管理员可见） */
 try{
 if(isAdmin()&&DATA.projects.length>0){
