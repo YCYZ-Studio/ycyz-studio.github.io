@@ -167,7 +167,7 @@ svg{flex-shrink:0}
 .progress-bar .fill{height:100%;background:var(--primary);border-radius:2px;transition:width .3s}
 
 /* ===== Pipeline Flow Diagram ===== */
-.pipeline-flow{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 12px;margin-bottom:12px}
+.pipeline-flow{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 12px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pipeline-svg{width:100%;height:auto;display:block;min-width:600px}
 .p-node{cursor:pointer;transition:transform .2s}
 .p-node:hover{transform:translateY(-2px)}
@@ -328,7 +328,8 @@ svg{flex-shrink:0}
 .cap-legend .dot{width:8px;height:8px;border-radius:2px}
 
 /* ===== Flow Board (Project Center pipeline) ===== */
-.pflow-board{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;min-height:300px}
+.pflow-board{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;min-height:300px;-webkit-overflow-scrolling:touch}
+.workflow-flow{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pflow-col{flex:0 0 200px;display:flex;flex-direction:column;gap:6px}
 .pflow-col-header{display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:var(--radius-s);font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
 .pflow-col-header .pf-num{font-size:10px;opacity:.7;margin-right:2px}
