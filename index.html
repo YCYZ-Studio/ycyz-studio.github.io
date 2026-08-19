@@ -491,7 +491,7 @@ creative:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="cu
 projects:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M7 4v4M17 4v4M3 12h18"/></svg>',
 dispatch:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 6h6M9 18h6M6 9v6M18 9v6"/></svg>',
 members:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>',
-mic:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0014 0M12 17v4M8 21h8"/></svg>',
+phone:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',mic:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0014 0M12 17v4M8 21h8"/></svg>',
 camera:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="4"/></svg>',
 edit:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>',
 calendar:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>',
@@ -532,7 +532,8 @@ var NAV=[
 {id:'calendar',label:'发布日历',icon:'calendar',phase:2},
 {id:'equipment',label:'设备与素材',icon:'box',phase:2},
 {id:'templates',label:'制度与模板',icon:'template',phase:2}
-]}
+]},
+{id:'external',label:'外联',icon:'phone',phase:1}
 ];
 
 /* ===== Status Config ===== */
@@ -1660,7 +1661,7 @@ currentPage=page;
 document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
 var navItem=document.querySelector('[data-page="'+page+'"]');
 if(navItem)navItem.classList.add('active');
-var titles={dashboard:'总览',creative:'创意池',projects:'项目中心',dispatch:'人员调度',members:'成员中心',checkin:'打卡中心',timeline:'年度时间轴',logs:'操作记录','dept-host':'主持部','dept-camera':'摄影部','dept-post':'后期部',recruit:'招新中心',calendar:'发布日历',equipment:'设备与素材',templates:'制度与模板'};
+var titles={dashboard:'总览',creative:'创意池',projects:'项目中心',dispatch:'人员调度',members:'成员中心',checkin:'打卡中心',timeline:'年度时间轴',logs:'操作记录','dept-host':'主持部','dept-camera':'摄影部','dept-post':'后期部',recruit:'招新中心',calendar:'发布日历',equipment:'设备与素材',templates:'制度与模板',external:'外联'};
 document.getElementById('page-title').textContent=titles[page]||page;
 renderPage(page);
 renderMobileNav();
@@ -1691,7 +1692,7 @@ if(!isAdmin()&&ADMIN_PAGES.indexOf(page)>=0){
 c.innerHTML='<div class="card card-pad" style="max-width:440px;margin:60px auto;text-align:center"><div style="font-size:38px;margin-bottom:12px;color:var(--warning)">'+I.warn+'</div><div class="font-600 mb-8" style="font-size:17px">该功能仅管理员可用</div><div class="text-sm text-t2 mb-16">请由电视台管理员（老师）切换管理员模式后访问。</div><button class="btn btn-primary" onclick="navigate(\'dashboard\')">返回总览</button></div>';
 return;
 }
-var pages={dashboard:renderDashboard,creative:renderCreative,projects:renderProjects,dispatch:renderDispatch,members:renderMembers,checkin:renderCheckin,timeline:renderTimeline,logs:renderLogs,'dept-host':function(){return renderDepartment('主持部');},'dept-camera':function(){return renderDepartment('摄影部');},'dept-post':function(){return renderDepartment('后期部');},recruit:renderRecruit,calendar:renderCalendar,equipment:renderEquipment,templates:renderTemplates};
+var pages={dashboard:renderDashboard,creative:renderCreative,projects:renderProjects,dispatch:renderDispatch,members:renderMembers,checkin:renderCheckin,timeline:renderTimeline,logs:renderLogs,'dept-host':function(){return renderDepartment('主持部');},'dept-camera':function(){return renderDepartment('摄影部');},'dept-post':function(){return renderDepartment('后期部');},recruit:renderRecruit,calendar:renderCalendar,equipment:renderEquipment,templates:renderTemplates,external:renderExternal};
 var fn=pages[page]||pages['dashboard'];
 try{
 var html=fn();
@@ -2316,8 +2317,19 @@ html+='<span class="chip '+(memberFilter==='all'?'active':'')+'" onclick="setMem
 html+='</div>';
 if(isAdmin())html+='<button class="btn btn-primary btn-sm" onclick="openAddMember()">'+I.plus+'添加成员</button>';
 html+='</div>';
+/* 成员中心只显示在校学生；老师/已毕业顾问见「外联」 */
+var studentOnly=searchMembers.filter(function(m){return !(m.role==='创始人'||m.role==='指导老师'||m.grade==='老师'||m.class==='已毕业');});
+var teacherRow=searchMembers.filter(function(m){return m.role==='指导老师'||m.grade==='老师';});
+if(teacherRow.length>0&&memberFilter==='all'){
+html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="font-600 mb-8">👩‍🏫 指导老师</div>';
+teacherRow.forEach(function(m){
+html+='<div class="flex items-center gap-12" style="padding:6px 0"><div style="width:36px;height:36px;border-radius:50%;background:#8b5cf6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600">'+initials(m.name)+'</div><div style="flex:1"><div class="font-600">'+esc(m.name)+'</div><div class="text-sm text-t2">'+esc(m.mainSkill||'教学指导')+'</div></div><span class="badge st-purple">指导老师</span></div>';
+});
+html+='</div>';
+}
+if(teacherRow.length===0)html+='';
 html+='<div class="table-wrap"><table class="table"><thead><tr><th>姓名</th><th>年级</th><th>部门</th><th>角色</th><th>参与类型</th><th>主技能</th><th>状态</th><th>项目</th><th>周时间</th></tr></thead><tbody>';
-searchMembers.filter(function(m){
+studentOnly.filter(function(m){
 if(memberFilter==='all')return true;
 if(memberFilter==='台长')return m.role==='台长';
 if(memberFilter==='特邀')return m.type==='特邀';
@@ -2336,6 +2348,27 @@ html+='<td>'+m.weeklyHours+'h</td>';
 html+='</tr>';
 });
 html+='</tbody></table></div>';
+return html;
+}
+/* ===== 外联（老师 + 已毕业顾问） ===== */
+function renderExternal(){
+var html='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>外联</strong> · 指导老师与技术顾问（已毕业创始人学长），非在校学生</div></div>';
+/* 老师栏 */
+var teachers=DATA.members.filter(function(m){return m.role==='指导老师'||m.grade==='老师';});
+html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">👩‍🏫 指导老师</div>';
+if(teachers.length===0){html+='<div class="empty">暂无</div>';}
+teachers.forEach(function(t){
+html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:#8b5cf6">'+initials(t.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(t.name)+'</div><div class="mc-role">'+esc(t.mainSkill||'教学指导')+'</div></div><span class="badge st-purple">指导老师</span></div><div class="mc-info"><span>'+(t.bio?esc(t.bio):'')+'</span><span>'+(t.contact?'联系：'+esc(t.contact):'')+'</span></div></div>';
+});
+html+='</div>';
+/* 技术顾问栏 */
+var advisors=DATA.members.filter(function(m){return m.role==='创始人';});
+html+='<div class="card card-pad"><div class="font-600 mb-8">🔧 技术顾问（已毕业创始人学长）</div>';
+if(advisors.length===0){html+='<div class="empty">暂无</div>';}
+advisors.forEach(function(t){
+html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:#0f766e">'+initials(t.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(t.name)+'</div><div class="mc-role">'+esc(t.grade||'已毕业')+(t.mainSkill?' · '+esc(t.mainSkill):'')+'</div></div><span class="badge st-teal">技术顾问</span></div><div class="mc-info"><span>'+(t.bio?esc(t.bio):'')+'</span><span>'+(t.contact?'联系：'+esc(t.contact):'')+'</span></div></div>';
+});
+html+='<div class="text-sm text-t3 mt-8">顾问为学长公益支持，请礼貌预约时间；紧急问题可找台长。</div></div>';
 return html;
 }
 window.setMemberFilter2=function(f){memberFilter=f;renderPage('members');};
