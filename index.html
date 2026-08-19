@@ -2856,9 +2856,9 @@ h+='</div>';
 h+='</div>';
 if(calendarSelectedDay){
 var sp=DATA.projects.filter(function(p){return p.publishDate===calendarSelectedDay;});
-h+='<div class="card card-pad mt-12"><div class="font-600 mb-8">'+calendarSelectedDay+' 发布项目</div>';
-if(sp.length===0){h+='<div class="text-sm text-t3">该日期暂无发布</div>';}
-else{sp.forEach(function(p){h+='<div class="alert-item" style="cursor:pointer" onclick="openProject('+p.id+')"><div class="alert-text">'+esc(p.title)+'</div>'+statusBadge(p.status)+'</div>';});}
+h+='<div class="card card-pad mt-12"><div class="flex justify-between items-center mb-8"><div class="font-600">'+calendarSelectedDay+' 发布项目</div>'+(isAdmin()?'<button class="btn btn-primary btn-sm" onclick="openScheduleForm()">'+I.plus+'安排发布</button>':'')+'</div>';
+if(sp.length===0){h+='<div class="text-sm text-t3">该日期暂无发布'+(isAdmin()?'，点击「安排发布」排期': '')+'</div>';}
+else{sp.forEach(function(p){h+='<div class="alert-item" style="cursor:pointer" onclick="openProject('+p.id+')"><div class="alert-text">'+esc(p.title)+'</div>'+statusBadge(p.status)+(isAdmin()?'<button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="event.stopPropagation();unschedulePublish('+p.id+')">取消</button>':'')+'</div>';});}
 h+='</div>';
 }
 return h;
@@ -2866,6 +2866,47 @@ return h;
 window.setCalendarView=function(v){calendarView=v;calendarSelectedDay=null;renderPage('calendar');};
 window.changeMonth=function(delta){calendarMonthOffset+=delta;calendarSelectedDay=null;renderPage('calendar');};
 window.toggleCalendarDay=function(ds){calendarSelectedDay=calendarSelectedDay===ds?null:ds;renderPage('calendar');};
+/* 发布排期：管理员给项目安排发布日期 */
+window.openScheduleForm=function(){
+var day=calendarSelectedDay;
+if(!day){showToast('请先在日历中选择日期');return;}
+var candidates=DATA.projects.filter(function(p){return p.status!=='已归档'&&p.status!=='已拒绝'&&p.status!=='已取消';});
+var modal=document.getElementById('modal-content');
+var html='<div class="modal-header"><h2>安排发布 · '+day+'</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择项目</label><select id="sched-project"><option value="">请选择项目</option>';
+candidates.forEach(function(p){html+='<option value="'+p.id+'"'+(p.publishDate===day?' selected':'')+'>'+esc(p.title)+'（'+(p.publishDate||'未排期')+'）</option>';});
+html+='</select></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">发布日期</label><input id="sched-date" value="'+day+'"></div>';
+html+='<div class="card card-pad" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)">排期后项目将在该日期发布，日历与时间轴同步显示。</div></div></div>';
+html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveSchedule()">保存排期</button></div>';
+modal.innerHTML=html;
+document.getElementById('modal-overlay').classList.add('show');
+};
+window.saveSchedule=function(){
+var sel=document.getElementById('sched-project');
+var pid=parseInt(sel?sel.value:'',10);
+var p=DATA.projects.find(function(x){return x.id===pid;});
+var date=(document.getElementById('sched-date')||{}).value||'';
+if(!p){showToast('请选择项目');return;}
+if(!date){showToast('请填写日期');return;}
+p.publishDate=date;
+saveData();
+logAction('发布排期','「'+p.title+'」排期发布 '+date);
+closeModal();
+renderPage('calendar');
+showToast('已安排 '+date+' 发布');
+};
+window.unschedulePublish=function(pid){
+var p=DATA.projects.find(function(x){return x.id===pid;});
+if(!p)return;
+showConfirm('取消排期','确定取消「'+esc(p.title)+'」的发布排期吗？',function(){
+p.publishDate='';
+saveData();
+logAction('取消排期','「'+p.title+'」取消发布排期');
+renderPage('calendar');
+showToast('已取消排期');
+});
+};
 
 function renderEquipment(){
 var stMap={'可用':{cls:'st-green'},'已借出':{cls:'st-amber'},'维修中':{cls:'st-red'}};
