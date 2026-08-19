@@ -69,6 +69,9 @@ svg{flex-shrink:0}
 .role-badge:before{content:'';width:7px;height:7px;border-radius:50%;background:var(--text3)}
 .role-badge.role-admin{border-color:var(--primary);color:var(--primary);background:var(--primary-l)}
 .role-badge.role-admin:before{background:var(--primary)}
+.role-badge.role-member{border-color:var(--success);color:var(--success);background:rgba(16,185,129,.08)}
+.role-badge.role-member:before{background:var(--success)}
+.role-badge.role-guest{border-color:var(--border2);color:var(--text3);background:transparent}
 .role-badge:hover{border-color:var(--primary)}
 
 /* ===== Content ===== */
@@ -827,6 +830,14 @@ var lastExport=null;
 
 /* ===== Utils ===== */
 function isAdmin(){return userMode==='admin';}
+function isMember(){return userMode==='member';}
+function isGuest(){return userMode==='guest';}
+/* 当前操作人姓名：管理员=身份；成员=选的名字；游客=null */
+function currentUserName(){
+if(userMode==='admin')return currentAdminName();
+if(userMode==='member'){try{return localStorage.getItem('wb_member_name')||'';}catch(e){return '';}}
+return '';
+}
 function esc(s){if(!s)return '';return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 /* 统一日期解析：支持 YYYY-MM-DD / YYYY-M-D，非法返回 null */
 function parseDateStr(s){
@@ -1040,7 +1051,7 @@ try{localStorage.setItem('wb_user_mode',role);}catch(e){}
 renderSidebar();
 applyRoleUI();
 navigate(currentPage);
-showToast(role==='admin'?'已切换为管理员模式':'已切换为成员模式');
+showToast(role==='admin'?'已进入管理员模式':role==='member'?'已进入成员模式':'已切换为游客（只读）');
 };
 /* 技术支持窗口：技术顾问（已毕业学长） + 联系方式 */
 window.openTechSupport=function(){
@@ -1064,9 +1075,20 @@ document.getElementById('modal-overlay').classList.add('show');
 };
 window.askSwitchRole=function(){
 if(isAdmin()){
-showConfirm('切换为成员模式','确定要切换为成员模式吗？管理功能将被隐藏。',function(){setRole('member');});
+showConfirm('切换身份','确定退出管理员模式吗？',function(){setRole('member');});
 return;
 }
+/* 成员/游客：弹窗提供「成员入口（选名字）」与「管理员口令」 */
+var modal=document.getElementById('modal-content');
+var html='<div class="modal-header"><h2>选择身份</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">我是成员（选择自己的名字）</label><select id="role-member-name"><option value="">请选择</option>';
+(DATA.members||[]).filter(function(m){return !(m.role==='技术顾问'||m.role==='指导老师'||m.grade==='老师'||m.class==='已毕业');}).forEach(function(m){html+='<option value="'+esc(m.name)+'">'+esc(m.name)+'（'+(m.dept?esc(m.dept):'台长')+'）</option>';});
+html+='</select></div><div class="flex gap-8 mb-12"><button class="btn btn-primary" onclick="loginAsMember()">进入成员版</button><button class="btn btn-ghost" onclick="loginAsGuest()">游客浏览</button></div>';
+html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员入口</label><input id="role-pass" type="password" placeholder="管理员口令" style="letter-spacing:2px"></div>';
+html+='<div class="flex gap-8"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="tryAdmin()">管理员登录</button></div></div>';
+modal.innerHTML=html;
+document.getElementById('modal-overlay').classList.add('show');
+return;
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>进入管理员模式</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
 html+='<div class="modal-body"><div class="form-group"><input id="role-pass" type="password" placeholder="输入口令" style="letter-spacing:3px;text-align:center"></div></div>';
@@ -1074,6 +1096,19 @@ html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeMod
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
 setTimeout(function(){var i=document.getElementById('role-pass');if(i)i.focus();},100);
+};
+window.loginAsMember=function(){
+var sel=document.getElementById('role-member-name');
+var name=sel?sel.value.trim():'';
+if(!name){showToast('请选择你的名字');return;}
+try{localStorage.setItem('wb_member_name',name);}catch(e){}
+closeModal();
+setRole('member');
+showToast('欢迎，'+name);
+};
+window.loginAsGuest=function(){
+closeModal();
+setRole('guest');
 };
 window.tryAdmin=function(){
 var i=document.getElementById('role-pass');
@@ -1101,17 +1136,17 @@ var tools=document.getElementById('admin-tools');
 if(tools)tools.style.display=admin?'':'none';
 var badge=document.getElementById('role-badge');
 if(badge){
-badge.textContent=admin?'管理员':'成员';
-badge.className='role-badge'+(admin?' role-admin':'');
+badge.textContent=admin?'管理员':isMember()?'成员':'游客';
+badge.className='role-badge'+(admin?' role-admin':isMember()?' role-member':' role-guest');
 }
 var checkinBtn=document.getElementById('topbar-checkin');
-if(checkinBtn)checkinBtn.style.display=admin?'inline-flex':'none';
+if(checkinBtn)checkinBtn.style.display=(admin||isMember())?'inline-flex':'none';
 /* 侧边栏用户卡动态化 */
 var su=document.getElementById('sidebar-user');
 if(su){
 var nm=su.querySelector('.name'),rl=su.querySelector('.role');
-if(nm)nm.textContent=admin?currentAdminName():'校园电视台';
-if(rl)rl.textContent=admin?'管理员 · 管理全部数据':'成员模式 · 查看参与';
+if(nm)nm.textContent=admin?currentAdminName():(isMember()?(currentUserName()||'成员'):'游客');
+if(rl)rl.textContent=admin?'管理员 · 管理全部数据':isMember()?'成员 · 可提交与报名':'游客 · 只读浏览';
 }
 }
 window.confirmOk=function(){
@@ -1870,6 +1905,15 @@ var srcColor=c.source==='学校立项'?'st-blue':c.source==='自主立项'?'st-t
 html+='<div class="card card-pad" style="cursor:pointer;position:relative" onclick="openCreative('+c.id+')">';
 html+='<div class="flex justify-between items-center mb-8"><span class="badge '+srcColor+'">'+esc(c.source)+'</span>'+statusBadge(c.status)+(c.viewed===false?'<span class="badge st-danger" style="margin-left:4px">新</span>':'')+'</div>';
 if(c.viewed===false)html+='<span class="red-dot" style="position:absolute;top:12px;right:12px" title="管理员未查看"></span>';
+var signups=c.signups||[];
+html+='<div class="flex items-center gap-8 mt-8" style="flex-wrap:wrap">';
+html+='<span class="text-sm text-t3">'+(signups.length>0?I.user+' 已有 '+signups.length+' 人报名：'+esc(signups.join('、')):'暂无报名')+'</span>';
+if(!isGuest()){
+var me=currentUserName();
+var signed=signups.indexOf(me)>=0;
+html+='<button class="btn btn-sm '+(signed?'btn-ghost':'btn-primary')+'" onclick="toggleCreativeSignup('+c.id+')">'+(signed?'✓ 已报名（取消）':'报名参与')+'</button>';
+}
+html+='</div>';
 html+='<div class="font-bold mb-8" style="font-size:15px">'+esc(c.title)+'</div>';
 html+='<div class="text-sm text-t2 mb-8" style="line-height:1.5">'+esc(c.coreIdea)+'</div>';
 html+='<div class="text-sm text-t3 flex items-center gap-12" style="flex-wrap:wrap">';
@@ -1879,7 +1923,7 @@ if(c.refs)html+='<span>参考视频 '+c.refs+' 个</span>';
 html+='</div></div>';
 });
 html+='</div>';
-html+='<div class="mt-12"><button class="btn btn-primary" onclick="openModal(\'creative-submit\')">'+I.plus+'提交新创意</button></div>';
+if(!isGuest())html+='<div class="mt-12"><button class="btn btn-primary" onclick="openModal(\'creative-submit\')">'+I.plus+'提交新创意</button></div>';
 return html;
 }
 window.setCreativeFilter=function(f){creativeFilter=f;renderPage('creative');};
@@ -2502,6 +2546,18 @@ return html;
 }
 
 /* ===== Creative Detail ===== */
+window.toggleCreativeSignup=function(id){
+var c=DATA.creatives.find(function(x){return x.id===id;});
+if(!c)return;
+var me=currentUserName();
+if(!me){showToast('请先以成员身份进入');return;}
+c.signups=c.signups||[];
+var idx=c.signups.indexOf(me);
+if(idx>=0){c.signups.splice(idx,1);showToast('已取消报名');}
+else{c.signups.push(me);showToast('报名成功！等待管理员整理');}
+saveData();
+renderPage('creative');
+};
 window.openCreative=function(id){
 var c=DATA.creatives.find(function(x){return x.id===id;});
 if(!c)return;
@@ -3277,6 +3333,7 @@ try{loadData();}catch(e){console.error('loadData失败',e);}
 /* 读取身份模式 */
 try{
 var um=localStorage.getItem('wb_user_mode');
+if(!um){um='guest';try{localStorage.setItem('wb_user_mode','guest');}catch(e){}}
 if(um==='admin'||um==='member')userMode=um;
 var le=localStorage.getItem('wb_last_export');
 if(le)lastExport=le;
