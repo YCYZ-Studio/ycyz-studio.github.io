@@ -1055,7 +1055,7 @@ return;
 }
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>进入管理员模式</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
-html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="管理员（公用）">管理员（公用）</option><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.account||f.name)+'">创始人 · '+esc(f.account||f.name)+'（'+esc(f.name)+'学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">所有管理员统一口令 ycyz1938（账号先按姓名，可在成员档案中修改）。</div></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="管理员（公用）">管理员（公用）</option><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.name)+'">创始人 · '+esc(f.name)+'（学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">所有管理员统一口令 ycyz1938（账号先按姓名，可在成员档案中修改）。</div></div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
@@ -1067,7 +1067,8 @@ var identity=idSel?idSel.value:'台长';
 var i=document.getElementById('role-pass');
 var val=i?i.value.trim():'';
 if(!val){showToast('请输入管理员口令');return;}
-var needPass='ycyz1938';
+var FOUNDER_PASSES={万雨恒:'WANYUHENG',易汉武:'YIHANWU'};
+var needPass=FOUNDER_PASSES[identity]||'ycyz1938';
 if(val===needPass){
 adminIdentity=identity;
 try{localStorage.setItem('wb_admin_identity',identity);}catch(_e){}
