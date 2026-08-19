@@ -879,7 +879,7 @@ html+='<div class="modal-body">';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">数据仓库（GitHub）</label><input id="cloud-env" value="'+esc(repo)+'" placeholder="如：YCYZ-Studio/campus-tv-data"></div>';
 html+='<div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">写入令牌 Token（可选，不填=只读拉取）</label><input id="cloud-token" type="password" value="'+esc(token)+'" placeholder="GitHub Personal Access Token"></div>';
 html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary);line-height:1.7">开启后：打开页面自动拉取云端最新数据；配置令牌后保存时自动上传，多台设备共用一份数据。<br><br>令牌获取：GitHub → Settings → Developer settings → Personal access tokens → 勾选 repo 权限生成（仅本机保存，不会上传）。</div></div>';
-html+='<div class="flex gap-8"><button class="btn btn-ghost" onclick="setCloudEnv(&quot;&quot;,&quot;&quot;)">关闭云端</button><button class="btn btn-primary" onclick="saveCloudEnv()">保存并连接</button></div>';
+html+='<div class="flex gap-8" style="flex-wrap:wrap"><button class="btn btn-ghost" onclick="setCloudEnv(&quot;&quot;,&quot;&quot;)">关闭云端</button><button class="btn btn-ghost" onclick="cloudPush();showToast(&#39;正在上传...&#39;)">立即上传</button><button class="btn btn-primary" onclick="saveCloudEnv()">保存并连接</button></div>';
 html+='</div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
@@ -940,6 +940,7 @@ else{cloudStatus='error';renderCloudBadge();console.warn('推送云端失败',r.
 }catch(e){console.warn('cloudPush',e);}
 },2000);
 }
+window.cloudPush=cloudPush;window.cloudPull=cloudPull;
 function renderCloudBadge(){
 var b=document.getElementById('cloud-badge');
 if(!b)return;
