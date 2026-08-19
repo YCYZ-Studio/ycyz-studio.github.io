@@ -802,13 +802,13 @@ var checkinUserId=null;
 var checkinDate=null;
 /* 身份模式：admin=管理员（电视台电脑/老师） member=成员（个人查看） */
 var userMode='member';
-/* 多管理员：台长 / 创始人 / 老师，各自独立密码（可在设置中修改，存 localStorage 覆盖） */
+/* 登录校验 */
 var ADMIN_PASSES={台长:'ycyz1938',创始人:'ycyz1938',老师:'ycyz1938'};
 var ADMIN_PASS='ycyz1938';
 var adminIdentity='台长';
 try{var _ai=localStorage.getItem('wb_admin_identity');if(_ai&&ADMIN_PASSES[_ai])adminIdentity=_ai;}catch(_e){}
 try{var _ap=JSON.parse(localStorage.getItem('wb_admin_passes')||'null');if(_ap&&_ap.台长)ADMIN_PASSES.台长=_ap.台长;if(_ap&&_ap.创始人)ADMIN_PASSES.创始人=_ap.创始人;if(_ap&&_ap.老师)ADMIN_PASSES.老师=_ap.老师;}catch(_e2){}
-/* 当前管理员姓名（按身份） */
+/* 当前身份 */
 function currentAdminName(){
 var map={台长:'台长',老师:'余颖','管理员（公用）':'管理员（公用）'};
 var m=(DATA.members||[]).find(function(x){return x.isAdmin&&x.role==='台长';});
@@ -1055,7 +1055,7 @@ return;
 }
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>进入管理员模式</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
-html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="管理员（公用）">管理员（公用）</option><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.name)+'">创始人 · '+esc(f.name)+'（学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">所有管理员统一口令 ycyz1938（账号先按姓名，可在成员档案中修改）。</div></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="管理员（公用）">管理员（公用）</option><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.name)+'">创始人 · '+esc(f.name)+'（学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">请选择身份并输入口令；台长/老师可联系台长获取口令。</div></div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
