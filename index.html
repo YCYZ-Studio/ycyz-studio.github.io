@@ -928,7 +928,8 @@ var CLOUD_DOC='workbench-data';
 var cloudStatus='off';
 var _pushTimer=null;
 var _cloudApp=null,_cloudDb=null,_cloudSdkLoading=false;
-function cloudEnvId(){try{return localStorage.getItem('wb_cloud_env')||'';}catch(e){return '';}}
+var CLOUD_ENV_DEFAULT='ycyz-studio-d9g40qmf5f7c1632d';
+function cloudEnvId(){try{return localStorage.getItem('wb_cloud_env')||CLOUD_ENV_DEFAULT;}catch(e){return CLOUD_ENV_DEFAULT;}}
 function cloudBackend(){return cloudEnvId()?'cloudbase':'github';}
 function cloudEnabled(){return CLOUD_REPO||cloudEnvId();}
 function cloudToken(){try{return localStorage.getItem('wb_cloud_token')||'';}catch(e){return '';}}
