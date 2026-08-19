@@ -897,10 +897,27 @@ setCloudEnv(v,t);
 function cloudPull(){
 var repo=cloudEnabled();
 if(!repo){cloudStatus='off';renderCloudBadge();return;}
-fetch('https://raw.githubusercontent.com/'+repo+'/'+CLOUD_BRANCH+'/data.json',{cache:'no-store'}).then(function(r){
+var token=cloudToken();
+/* 优先走认证拉取（私有仓库）；无令牌时尝试公开 raw（公开仓库） */
+var pullPromise;
+if(token){
+pullPromise=fetch('https://api.github.com/repos/'+repo+'/contents/data.json',{headers:{'Accept':'application/vnd.github+json','Authorization':'token '+token}}).then(function(r){
 if(!r.ok)throw new Error('HTTP '+r.status);
 return r.json();
-}).then(function(obj){
+}).then(function(info){
+if(!info||!info.content)throw new Error('no content');
+var bin=atob(info.content);
+var bytes=new Uint8Array(bin.length);
+for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+});
+}else{
+pullPromise=fetch('https://raw.githubusercontent.com/'+repo+'/'+CLOUD_BRANCH+'/data.json',{cache:'no-store'}).then(function(r){
+if(!r.ok)throw new Error('HTTP '+r.status);
+return r.json();
+});
+}
+pullPromise.then(function(obj){
 var parsed=obj&&obj.d?obj.d:obj;
 var cloudUpdated=Number(obj&&obj.updated)||0;
 if(parsed&&isValidData(parsed)){
