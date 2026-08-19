@@ -999,11 +999,12 @@ function cloudPull(){
 if(cloudBackend()==='cloudbase'){
 if(!_cloudDb){if(cloudEnvId())initCloud();return;}
 _cloudDb.collection(CLOUD_COLL).doc(CLOUD_DOC).get().then(function(res){
-if(res&&res.data&&res.data.json){
+var _cdoc=Array.isArray(res.data)?res.data[0]:(res.data||null);
+if(_cdoc&&_cdoc.json){
 try{
-var parsed=JSON.parse(res.data.json);
+var parsed=JSON.parse(_cdoc.json);
 if(parsed&&isValidData(parsed)){
-var cloudUpdated=Number(res.data.updated)||0;
+var cloudUpdated=Number(_cdoc.updated)||0;
 var localUpdated=Number(localStorage.getItem('wb_data_updated'))||0;
 if(cloudUpdated>0&&localUpdated>0&&cloudUpdated<localUpdated){cloudStatus='synced';renderCloudBadge();return;}
 DATA=mergeData(parsed);
