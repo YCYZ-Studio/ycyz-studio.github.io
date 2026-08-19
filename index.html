@@ -1003,12 +1003,13 @@ if(!_cloudDb){if(cloudEnvId())initCloud();return;}
 _cloudDb.collection(CLOUD_COLL).limit(100).get().then(function(res){
 var _list=Array.isArray(res.data)?res.data:[];
 var _cdoc=null,_best=0;
-_list.forEach(function(doc){var u=Number(doc.updated)||0;if(u>=_best&&doc.json){_best=u;_cdoc=doc;}});
-if(_cdoc&&_cdoc.json){
+_list.forEach(function(doc){var _j=(doc.data&&doc.data.json)||doc.json;var u=Number((doc.data&&doc.data.updated)||doc.updated)||0;if(_j&&u>=_best){_best=u;_cdoc=doc;}});
+var _cdocJ=(_cdoc.data&&_cdoc.data.json)||_cdoc.json;
+if(_cdocJ){
 try{
-var parsed=JSON.parse(_cdoc.json);
+var parsed=JSON.parse(_cdocJ);
 if(parsed&&isValidData(parsed)){
-var cloudUpdated=Number(_cdoc.updated)||0;
+var cloudUpdated=Number((_cdoc.data&&_cdoc.data.updated)||_cdoc.updated)||0;
 var localUpdated=Number(localStorage.getItem('wb_data_updated'))||0;
 if(cloudUpdated>0&&localUpdated>0&&cloudUpdated<localUpdated){cloudStatus='synced';renderCloudBadge();return;}
 DATA=mergeData(parsed);
@@ -1077,8 +1078,9 @@ if(!_cloudDb){if(cloudEnvId())initCloud();return;}
 _cloudDb.collection(CLOUD_COLL).limit(50).get().then(function(_r){
 var _l=Array.isArray(_r.data)?_r.data:[];
 var _best=null,_bu=0;
-_l.forEach(function(doc){var u=Number(doc.updated)||0;if(u>=_bu&&doc.json){_bu=u;_best=doc;}});
-if(_best&&_best.json){try{var _p=JSON.parse(_best.json);if(_p&&isValidData(_p)&&_bu>(Number(localStorage.getItem('wb_data_updated'))||0)){DATA=mergeData(_p);try{localStorage.setItem(LS_KEY,JSON.stringify(DATA));}catch(e2){}}}catch(e1){}}
+_l.forEach(function(doc){var _j=(doc.data&&doc.data.json)||doc.json;var u=Number((doc.data&&doc.data.updated)||doc.updated)||0;if(_j&&u>=_bu){_bu=u;_best=doc;}});
+var _bestJ=(_best.data&&_best.data.json)||_best.json;
+if(_bestJ){try{var _p=JSON.parse(_bestJ);if(_p&&isValidData(_p)&&_bu>(Number(localStorage.getItem('wb_data_updated'))||0)){DATA=mergeData(_p);try{localStorage.setItem(LS_KEY,JSON.stringify(DATA));}catch(e2){}}}catch(e1){}}
 payload={json:JSON.stringify(DATA),updated:Date.now()};
 return _cloudDb.collection(CLOUD_COLL).add({data:{json:payload.json,updated:payload.updated,device:cloudDeviceId()}});
 }).then(function(){
