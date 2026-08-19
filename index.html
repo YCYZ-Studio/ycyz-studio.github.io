@@ -925,6 +925,7 @@ var CLOUD_BRANCH='main';
 var cloudStatus='off'; // off | connecting | synced | error
 var _pushTimer=null;
 function cloudEnabled(){return CLOUD_REPO||(function(){try{return localStorage.getItem('wb_cloud_repo')||'';}catch(e){return '';}})();}
+
 function cloudToken(){try{return localStorage.getItem('wb_cloud_token')||'';}catch(e){return '';}}
 window.setCloudEnv=function(repo,token){
 repo=(repo||'').trim();
