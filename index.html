@@ -1117,6 +1117,8 @@ else{cloudStatus='error';renderCloudBadge();console.warn('推送云端失败',r.
 function renderCloudBadge(){
 var b=document.getElementById('cloud-badge');
 if(!b)return;
+/* 云端徽章仅管理员可见（成员无感） */
+b.style.display=isAdmin()?'':'none';
 var map={off:{t:'本地模式',c:'var(--text3)'},connecting:{t:'连接云端...',c:'var(--warning)'},synced:{t:'云已同步',c:'var(--success)'},error:{t:'云端异常',c:'var(--danger)'}};
 var m=map[cloudStatus]||map.off;
 b.textContent=m.t;
