@@ -2573,7 +2573,7 @@ html+='<div class="card card-pad mb-12"><div class="flex justify-between items-c
 var applicants=r.applicants.filter(function(a){return recruitStageFilter===''?true:a.stage===recruitStageFilter;});
 applicants.forEach(function(a){
 var stageCls=a.stage==='试用期'?'st-purple':a.stage==='专业复试'?'st-cyan':'st-blue';
-html+='<tr><td class="font-600">'+a.name+'</td><td>'+a.grade+'</td><td>'+a.first+'</td><td>'+a.second+'</td><td><span class="badge '+stageCls+'">'+a.stage+'</span></td><td>'+(a.score?a.score:'-')+'</td><td>';
+html+='<tr><td class="font-600">'+esc(a.name)+'</td><td>'+esc(a.grade)+'</td><td>'+esc(a.first)+'</td><td>'+esc(a.second)+'</td><td><span class="badge '+stageCls+'">'+esc(a.stage)+'</span></td><td>'+(a.score?esc(a.score):'-')+'</td><td>';
 if(a.stage==='正式录取'){html+='<span class="badge st-green">已录取</span>';}
 else{html+='<button class="btn btn-ghost btn-sm" onclick="advanceApplicant('+a.id+')">推进</button>';}
 html+='</td></tr>';
