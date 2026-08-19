@@ -1783,7 +1783,7 @@ var html='';
 items.forEach(function(it){
 if(it.id==='dispatch'&&!isAdmin())return;
 var active=it.id==='me'?false:currentPage===it.id;
-var onclick=it.id==='me'?('openMember('+((DATA.members[0]&&DATA.members[0].id)||1)+')'):'navigate(\''+it.id+'\')';
+var onclick=it.id==='me'?'navigate(\'me\')':'navigate(\''+it.id+'\')';
 html+='<div class="mt-item'+(active?' active':'')+'" onclick="'+onclick+'">'+I[it.icon]+'<span>'+it.label+'</span></div>';
 });
 nav.innerHTML=html;
