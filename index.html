@@ -1826,7 +1826,7 @@ var html='';
 /* 管理员快捷操作面板 */
 if(isAdmin()){
 var pendingCreatives=(DATA.creatives||[]).filter(function(c){return c.status==='创意待整理';}).length;
-html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="font-600 mb-8">'+I.plus+' 快捷操作（管理员）</div>';
+html+='<div class="card card-pad mb-12 quick-actions" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="font-600 mb-8">'+I.plus+' 快捷操作（管理员）</div>';
 html+='<div class="flex gap-8" style="flex-wrap:wrap">';
 html+='<button class="btn btn-primary btn-sm" onclick="openModal(\'project-submit\')">'+I.plus+'新建项目</button>';
 html+='<button class="btn btn-primary btn-sm" onclick="openAddMember()">'+I.plus+'添加成员</button>';
@@ -3472,6 +3472,7 @@ if(!isNaN(days)&&days>=7)showToast('该备份了：距上次导出已 '+days+' �
 }
 }
 }catch(e){}
+try{applyTheme();}catch(e){}
 try{navigate('dashboard');}catch(e){
 console.error('首次渲染失败，500ms后重试',e);
 setTimeout(function(){try{navigate('dashboard');}catch(_){}},500);
