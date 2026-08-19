@@ -868,7 +868,7 @@ saveData();
 
 /* ===== Cloud Sync（GitHub 数据仓库，多端同步） ===== */
 /* 数据仓库：YCYZ-Studio/campus-tv-data · data.json；公开可读，写需 Token */
-var CLOUD_REPO=''; // GitHub 数据仓库，如 YCYZ-Studio/campus-tv-data
+var CLOUD_REPO='YCYZ-Studio/campus-tv-data'; // 默认公开数据仓库（免配置拉取）；上传仍需令牌
 var CLOUD_BRANCH='main';
 var cloudStatus='off'; // off | connecting | synced | error
 var _pushTimer=null;
