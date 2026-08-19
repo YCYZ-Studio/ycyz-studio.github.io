@@ -969,6 +969,8 @@ try{localStorage.setItem('wb_cloud_env',env.trim());}catch(e){}
 closeModal();
 setCloudEnv(env);
 };
+function mergeArrById(a,b){var seen={},out=[];(a||[]).forEach(function(it){if(it&&it.id!==undefined&&!seen[it.id]){seen[it.id]=1;out.push(it);}});(b||[]).forEach(function(it){if(it&&it.id!==undefined&&!seen[it.id]){seen[it.id]=1;out.push(it);}});return out;}
+function mergeAll(a,b){var arrKeys=['departments','members','projects','creatives','equipment','alerts','templates','checkins','meetings','annualPlans','logs','positions'];var out={};for(var k in a){if(arrKeys.indexOf(k)>=0){out[k]=mergeArrById(a[k],b[k]);}else if(b[k]!==undefined&&b[k]!==null){out[k]=b[k];}else{out[k]=a[k];}}for(var k2 in b){if(out[k2]===undefined){if(arrKeys.indexOf(k2)>=0){out[k2]=mergeArrById(a[k2],b[k2]);}else{out[k2]=b[k2];}}}if(a.recruitment||b.recruitment){out.recruitment={funnel:(b.recruitment&&b.recruitment.funnel)||(a.recruitment&&a.recruitment.funnel)||{initial:0,retest:0,trial:0,accepted:0},applicants:mergeArrById((a.recruitment&&a.recruitment.applicants)||[],(b.recruitment&&b.recruitment.applicants)||[])};}return out;}
 /* CloudBase SDK 加载与初始化 */
 function loadCloudSDK(){
 if(window.cloudbase){initCloud();return;}
@@ -1010,12 +1012,11 @@ var parsed=JSON.parse(_cdocJ);
 if(parsed&&isValidData(parsed)){
 var cloudUpdated=Number((_cdoc.data&&_cdoc.data.updated)||_cdoc.updated)||0;
 var localUpdated=Number(localStorage.getItem('wb_data_updated'))||0;
-if(cloudUpdated>0&&localUpdated>0&&cloudUpdated<localUpdated){cloudStatus='synced';renderCloudBadge();return;}
-DATA=mergeData(parsed);
+DATA=mergeAll(DATA,parsed);
+if(cloudUpdated>0)localStorage.setItem('wb_data_updated',String(Math.max(localUpdated,cloudUpdated)));
 migrateData();
 try{
 localStorage.setItem(LS_KEY,JSON.stringify(DATA));
-if(cloudUpdated>0)localStorage.setItem('wb_data_updated',String(cloudUpdated));
 }catch(e){}
 cloudStatus='synced';renderCloudBadge();
 cloudTrim();
@@ -1080,7 +1081,7 @@ var _l=Array.isArray(_r.data)?_r.data:[];
 var _best=null,_bu=0;
 _l.forEach(function(doc){var _j=(doc.data&&doc.data.json)||doc.json;var u=Number((doc.data&&doc.data.updated)||doc.updated)||0;if(_j&&u>=_bu){_bu=u;_best=doc;}});
 var _bestJ=(_best.data&&_best.data.json)||_best.json;
-if(_bestJ){try{var _p=JSON.parse(_bestJ);if(_p&&isValidData(_p)&&_bu>(Number(localStorage.getItem('wb_data_updated'))||0)){DATA=mergeData(_p);try{localStorage.setItem(LS_KEY,JSON.stringify(DATA));}catch(e2){}}}catch(e1){}}
+if(_bestJ){try{var _p=JSON.parse(_bestJ);if(_p&&isValidData(_p)){DATA=mergeAll(DATA,_p);try{localStorage.setItem(LS_KEY,JSON.stringify(DATA));}catch(e2){}}}catch(e1){}}
 payload={json:JSON.stringify(DATA),updated:Date.now()};
 return _cloudDb.collection(CLOUD_COLL).add({data:{json:payload.json,updated:payload.updated,device:cloudDeviceId()}});
 }).then(function(){
