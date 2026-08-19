@@ -12,6 +12,15 @@
 <style>
 /* ===== Reset & Variables ===== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root[data-theme="dark"]{
+--bg:#0f172a;--surface:#1e293b;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+--border:#334155;--border2:#475569;--primary:#3b82f6;--primary-l:#1e3a5f;--primary-d:#2563eb;
+--success:#34d399;--success-l:#064e3b;--warning:#fbbf24;--warning-l:#78350f;
+--danger:#f87171;--danger-l:#7f1d1d;--purple:#a78bfa;--purple-l:#4c1d95;
+--cyan:#22d3ee;--cyan-l:#155e75;--teal:#2dd4bf;--teal-l:#115e59;
+--indigo:#818cf8;--indigo-l:#3730a3;--amber:#fbbf24;--amber-l:#78350f;
+--shadow:0 1px 3px rgba(0,0,0,.4);--shadow-l:0 8px 24px rgba(0,0,0,.5);
+}
 :root{
 --bg:#f1f5f9;--surface:#fff;--text:#1e293b;--text2:#64748b;--text3:#94a3b8;
 --border:#e2e8f0;--border2:#cbd5e1;--primary:#2563eb;--primary-l:#eff6ff;--primary-d:#1d4ed8;
@@ -26,9 +35,10 @@
 --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
 }
 html{font-size:14px;-webkit-text-size-adjust:100%}
+html,body{max-width:100%;overflow-x:hidden}
 body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-input,select,textarea{font-family:inherit;font-size:14px;color:var(--text);background:#fff;border:1px solid var(--border2);border-radius:var(--radius-s);padding:7px 10px;width:100%}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-s);padding:7px 10px;width:100%}
 input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 a{color:var(--primary);text-decoration:none}
 svg{flex-shrink:0}
@@ -1080,7 +1090,9 @@ userMode=role;
 try{localStorage.setItem('wb_user_mode',role);}catch(e){}
 renderSidebar();
 applyRoleUI();
-navigate(currentPage);
+applyTheme();
+var dp='dashboard';try{dp=localStorage.getItem('wb_default_page')||'dashboard';}catch(e){}
+navigate(dp);
 showToast(role==='admin'?'已进入管理员模式':role==='member'?'已进入成员模式':'已切换为游客（只读）');
 };
 /* 技术支持窗口：技术顾问（已毕业学长） + 联系方式 */
@@ -1754,7 +1766,7 @@ currentPage=page;
 document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
 var navItem=document.querySelector('[data-page="'+page+'"]');
 if(navItem)navItem.classList.add('active');
-var titles={dashboard:'总览',creative:'创意池',projects:'项目中心',dispatch:'人员调度',members:'成员中心',checkin:'打卡中心',timeline:'年度时间轴',logs:'操作记录','dept-host':'主持部','dept-camera':'摄影部','dept-post':'后期部',recruit:'招新中心',calendar:'发布日历',equipment:'设备与素材',templates:'制度与模板',external:'外联'};
+var titles={dashboard:'总览',creative:'创意池',projects:'项目中心',dispatch:'人员调度',members:'成员中心',checkin:'打卡中心',timeline:'年度时间轴',logs:'操作记录','dept-host':'主持部','dept-camera':'摄影部','dept-post':'后期部',recruit:'招新中心',calendar:'发布日历',equipment:'设备与素材',templates:'制度与模板',external:'外联',me:'我的'};
 document.getElementById('page-title').textContent=titles[page]||page;
 renderPage(page);
 renderMobileNav();
@@ -1785,7 +1797,7 @@ if(!isAdmin()&&ADMIN_PAGES.indexOf(page)>=0){
 c.innerHTML='<div class="card card-pad" style="max-width:440px;margin:60px auto;text-align:center"><div style="font-size:38px;margin-bottom:12px;color:var(--warning)">'+I.warn+'</div><div class="font-600 mb-8" style="font-size:17px">该功能仅管理员可用</div><div class="text-sm text-t2 mb-16">请由电视台管理员（老师）切换管理员模式后访问。</div><button class="btn btn-primary" onclick="navigate(\'dashboard\')">返回总览</button></div>';
 return;
 }
-var pages={dashboard:renderDashboard,creative:renderCreative,projects:renderProjects,dispatch:renderDispatch,members:renderMembers,checkin:renderCheckin,timeline:renderTimeline,logs:renderLogs,'dept-host':function(){return renderDepartment('主持部');},'dept-camera':function(){return renderDepartment('摄影部');},'dept-post':function(){return renderDepartment('后期部');},recruit:renderRecruit,calendar:renderCalendar,equipment:renderEquipment,templates:renderTemplates,external:renderExternal};
+var pages={dashboard:renderDashboard,creative:renderCreative,projects:renderProjects,dispatch:renderDispatch,members:renderMembers,checkin:renderCheckin,timeline:renderTimeline,logs:renderLogs,'dept-host':function(){return renderDepartment('主持部');},'dept-camera':function(){return renderDepartment('摄影部');},'dept-post':function(){return renderDepartment('后期部');},recruit:renderRecruit,calendar:renderCalendar,equipment:renderEquipment,templates:renderTemplates,external:renderExternal,me:renderMe};
 var fn=pages[page]||pages['dashboard'];
 try{
 var html=fn();
@@ -2454,6 +2466,58 @@ html+='</tbody></table></div>';
 return html;
 }
 /* ===== 外联（老师 + 已毕业顾问） ===== */
+/* ===== 我的（身份 + 我的参与 + 自定义设置） ===== */
+function renderMe(){
+var me=currentUserName();
+var isM=isMember(), isA=isAdmin();
+var nickname='';
+try{nickname=localStorage.getItem('wb_nickname')||'';}catch(e){}
+var displayName=nickname||(isA?currentAdminName():isM?me:'游客');
+var roleText=isA?'管理员 · 管理全部数据':isM?'成员 · '+me:'游客 · 只读浏览';
+var html='';
+/* 身份卡 */
+html+='<div class="card card-pad mb-12"><div class="flex items-center gap-12"><div style="width:52px;height:52px;border-radius:50%;background:'+(isA?'var(--primary)':isM?'#10b981':'var(--border2)')+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600">'+(displayName?displayName.charAt(0):'?')+'</div><div><div class="font-600" style="font-size:17px">'+esc(displayName)+'</div><div class="text-sm text-t2">'+roleText+'</div></div></div></div>';
+/* 我的参与（成员） */
+if(isM){
+var mine=DATA.creatives.filter(function(c){return c.submitter===me||(c.signups||[]).indexOf(me)>=0;});
+html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">我的参与</div>';
+if(mine.length===0)html+='<div class="empty">你还没提交或报名任何创意</div>';
+mine.forEach(function(c){
+html+='<div class="flex items-center justify-between gap-8 mb-6" style="padding:8px;border:1px solid var(--border);border-radius:8px"><div><div class="font-600" style="font-size:13px">'+esc(c.title)+'</div><div class="text-sm text-t3">'+(c.submitter===me?'我提交的':'我报名的')+' · '+statusBadge(c.status)+'</div></div><button class="btn btn-ghost btn-sm" onclick="openCreative('+c.id+')">查看</button></div>';
+});
+html+='</div>';
+}
+/* 自定义设置 */
+var theme='';try{theme=localStorage.getItem('wb_theme')||'light';}catch(e){}
+var defPage='';try{defPage=localStorage.getItem('wb_default_page')||'dashboard';}catch(e){}
+html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">自定义设置</div>';
+html+='<div class="form-group mb-8"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">昵称（显示在首页）</label><input id="me-nickname" value="'+esc(nickname)+'" placeholder="如：'+(me||'陈奕多')+'"></div>';
+html+='<div class="form-group mb-8"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">主题</label><select id="me-theme"><option value="light"'+(theme==='light'?' selected':'')+'>浅色</option><option value="dark"'+(theme==='dark'?' selected':'')+'>深色</option></select></div>';
+html+='<div class="form-group mb-8"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">默认首页</label><select id="me-defpage"><option value="dashboard"'+(defPage==='dashboard'?' selected':'')+'>总览</option><option value="creative"'+(defPage==='creative'?' selected':'')+'>创意池</option><option value="projects"'+(defPage==='projects'?' selected':'')+'>项目中心</option><option value="timeline"'+(defPage==='timeline'?' selected':'')+'>年度时间轴</option></select></div>';
+html+='<button class="btn btn-primary btn-sm" onclick="saveMeSettings()">保存设置</button></div>';
+/* 账号操作 */
+html+='<div class="card card-pad"><div class="font-600 mb-8">账号</div>';
+html+='<div class="flex gap-8" style="flex-wrap:wrap"><button class="btn btn-ghost btn-sm" onclick="askSwitchRole()">切换身份</button><button class="btn btn-ghost btn-sm" onclick="askCloudConfig()">云端同步</button>';
+if(isM||isA)html+='<button class="btn btn-danger btn-sm" onclick="logout()">退出登录</button>';
+html+='</div></div>';
+return html;
+}
+/* 保存我的设置 */
+window.saveMeSettings=function(){
+var nk=(document.getElementById('me-nickname')||{}).value||'';
+var th=(document.getElementById('me-theme')||{}).value||'light';
+var dp=(document.getElementById('me-defpage')||{}).value||'dashboard';
+try{localStorage.setItem('wb_nickname',nk.trim());localStorage.setItem('wb_theme',th);localStorage.setItem('wb_default_page',dp);}catch(e){}
+applyTheme();
+renderSidebar();
+renderPage('me');
+showToast('设置已保存');
+};
+/* 应用主题 */
+function applyTheme(){
+var th='light';try{th=localStorage.getItem('wb_theme')||'light';}catch(e){}
+var de=document.documentElement;if(de)de.setAttribute('data-theme',th==='dark'?'dark':'light');
+}
 function renderExternal(){
 var html='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>外联</strong> · 指导老师与技术顾问（已毕业学长），非在校学生</div></div>';
 /* 老师栏 */
