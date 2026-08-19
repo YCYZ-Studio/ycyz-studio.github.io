@@ -409,6 +409,36 @@ button,.nav-item,.chip,.panel-tab{min-height:44px}
 input,textarea,select{font-size:16px}
 .flow-card,.pflow-card,.proj-card,.member-card{padding:12px}
 .global-search{width:100%}
+.topbar{padding:10px 12px}
+.topbar .tb-title{font-size:15px}
+.page-head{flex-wrap:wrap;gap:8px}
+.page-head h1{font-size:19px}
+.filter-bar{flex-wrap:wrap;gap:6px}
+.table-wrap{-webkit-overflow-scrolling:touch}
+.table{font-size:12px}
+.table th,.table td{padding:8px 10px;white-space:nowrap}
+.modal-body .grid-2,.modal-body .grid-3{grid-template-columns:1fr}
+.panel-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+.panel-tab{flex-shrink:0}
+.section-title{font-size:15px}
+.member-card .mc-top{flex-wrap:wrap}
+.metric .m-value{font-size:22px}
+.tl-wrap{min-width:0}
+.cal-cell{min-height:52px}
+.cal-proj{font-size:10px}
+.vstepper,.workflow-flow{overflow-x:auto}
+.mobile-tabbar{height:58px}
+.mt-item{font-size:10px}
+.mt-item svg{width:20px;height:20px}
+.step-bar{flex-wrap:wrap;gap:4px}
+.mb-16{margin-bottom:12px!important}
+.mb-12{margin-bottom:10px!important}
+.chip{font-size:12px;padding:6px 10px}
+.btn{padding:0 12px;font-size:13px}
+.modal{max-height:88vh;overflow-y:auto}
+.crew-grid,.dept-grid{grid-template-columns:1fr}
+.kanban{flex-direction:column;overflow:visible}
+.kanban-col{flex:1 1 auto;min-width:0}
 }
 </style>
 </head>
@@ -1081,7 +1111,7 @@ return;
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>登录</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
 html+='<div class="modal-body"><div class="form-group"><input id="role-pass" type="password" placeholder="输入口令" style="letter-spacing:3px;text-align:center"></div></div>';
-html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="loginAsGuest()">游客浏览</button><button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
+html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="loginAsGuest()">游客浏览</button>'+(localStorage.getItem('wb_member_name')||isMember()?'<button class="btn btn-ghost" onclick="logout()">退出登录</button>':'')+'<button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
 setTimeout(function(){var i=document.getElementById('role-pass');if(i&&i.focus)i.focus();},100);
@@ -1102,6 +1132,12 @@ try{localStorage.setItem('wb_member_name',name);}catch(e){}
 closeModal();
 setRole('member');
 showToast('欢迎，'+name);
+};
+window.logout=function(){
+try{localStorage.removeItem('wb_member_name');localStorage.removeItem('wb_admin_identity');}catch(e){}
+closeModal();
+setRole('guest');
+showToast('已退出登录，当前为游客');
 };
 window.loginAsGuest=function(){
 closeModal();
