@@ -933,6 +933,7 @@ function cloudEnvId(){try{return localStorage.getItem('wb_cloud_env')||CLOUD_ENV
 function cloudBackend(){return cloudEnvId()?'cloudbase':'github';}
 function cloudEnabled(){return CLOUD_REPO||cloudEnvId();}
 function cloudToken(){try{return localStorage.getItem('wb_cloud_token')||'';}catch(e){return '';}}
+function cloudDeviceId(){try{var d=localStorage.getItem('wb_device_id');if(!d){d='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem('wb_device_id',d);}return d;}catch(e){return 'd'+(Date.now().toString(36));}}
 /* 设置后端：envId 填 → 腾讯云；空 → GitHub */
 window.setCloudEnv=function(envId){
 envId=(envId||'').trim();
@@ -999,8 +1000,10 @@ cloudPull();
 function cloudPull(){
 if(cloudBackend()==='cloudbase'){
 if(!_cloudDb){if(cloudEnvId())initCloud();return;}
-_cloudDb.collection(CLOUD_COLL).doc(CLOUD_DOC).get().then(function(res){
-var _cdoc=Array.isArray(res.data)?res.data[0]:(res.data||null);
+_cloudDb.collection(CLOUD_COLL).limit(100).get().then(function(res){
+var _list=Array.isArray(res.data)?res.data:[];
+var _cdoc=null,_best=0;
+_list.forEach(function(doc){var u=Number(doc.updated)||0;if(u>=_best&&doc.json){_best=u;_cdoc=doc;}});
 if(_cdoc&&_cdoc.json){
 try{
 var parsed=JSON.parse(_cdoc.json);
@@ -1071,7 +1074,7 @@ try{
 var payload={json:JSON.stringify(DATA),updated:Date.now()};
 if(cloudBackend()==='cloudbase'){
 if(!_cloudDb){if(cloudEnvId())initCloud();return;}
-_cloudDb.collection(CLOUD_COLL).doc(CLOUD_DOC).set(payload).then(function(){
+_cloudDb.collection(CLOUD_COLL).add({data:{json:payload.json,updated:payload.updated,device:cloudDeviceId()}}).then(function(){
 cloudStatus='synced';renderCloudBadge();
 }).catch(function(e){cloudStatus='error';renderCloudBadge();console.warn('推送云端失败',e);});
 return;
