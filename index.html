@@ -604,8 +604,8 @@ members:[
 {id:10,name:'邹昱瑾',grade:'高二',class:'4班',dept:'摄影部',role:'成员',type:'核心',mainSkill:'相机操作',subSkills:[],weeklyHours:10,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'放学后',canFullShoot:true,examPause:'期末前两周',bio:'摄影部成员'
 ,device:'DJI Pocket 3',trainings:[],履历:[],评价:''},
 {id:11,name:'余颖',grade:'老师',class:'-',dept:null,role:'指导老师',isAdmin:true,type:'特邀',mainSkill:'教学指导',subSkills:[],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:false,needMentor:false,avail:'按需',canFullShoot:false,examPause:'无',bio:'电视台指导老师',trainings:[],履历:[],评价:''},
-{id:12,name:'万雨恒',account:'WANYUHENG',grade:'青岛电影学院',class:'已毕业',dept:null,role:'创始人',isAdmin:true,type:'特邀',mainSkill:'电影摄影',subSkills:['摄影','灯光'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:true,examPause:'无',bio:'创始人学长 · 青岛电影学院 电影摄影',contact:'待补充',trainings:[],履历:[],评价:''},
-{id:13,name:'易汉武',account:'YIHANWU',grade:'山西电影学院',class:'已毕业',dept:null,role:'创始人',isAdmin:true,type:'特邀',mainSkill:'电影学',subSkills:['编导','策划'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:false,examPause:'无',bio:'创始人学长 · 山西电影学院 电影学',contact:'18827844021（微信同号）',trainings:[],履历:[],评价:''}
+{id:12,name:'万雨恒',account:'WANYUHENG',grade:'青岛电影学院',class:'已毕业',dept:null,role:'技术顾问',isAdmin:true,type:'特邀',mainSkill:'电影摄影',subSkills:['摄影','灯光'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:true,examPause:'无',bio:'技术顾问学长 · 青岛电影学院 电影摄影',contact:'待补充',trainings:[],履历:[],评价:''},
+{id:13,name:'易汉武',account:'YIHANWU',grade:'山西电影学院',class:'已毕业',dept:null,role:'技术顾问',isAdmin:true,type:'特邀',mainSkill:'电影学',subSkills:['编导','策划'],weeklyHours:0,status:'空闲',currentProjects:0,canProduce:true,needMentor:false,avail:'远程',canFullShoot:false,examPause:'无',bio:'技术顾问学长 · 山西电影学院 电影学',contact:'18827844021（微信同号）',trainings:[],履历:[],评价:''}
 ],
 creatives:[
 ],
@@ -804,11 +804,11 @@ var checkinDate=null;
 /* 身份模式：admin=管理员（电视台电脑/老师） member=成员（个人查看） */
 var userMode='member';
 /* 登录校验 */
-var ADMIN_PASSES={台长:'ycyz1938',创始人:'ycyz1938',老师:'ycyz1938'};
+var ADMIN_PASSES={台长:'ycyz1938',技术顾问:'ycyz1938',老师:'ycyz1938'};
 var ADMIN_PASS='ycyz1938';
 var adminIdentity='台长';
 try{var _ai=localStorage.getItem('wb_admin_identity');if(_ai&&ADMIN_PASSES[_ai])adminIdentity=_ai;}catch(_e){}
-try{var _ap=JSON.parse(localStorage.getItem('wb_admin_passes')||'null');if(_ap&&_ap.台长)ADMIN_PASSES.台长=_ap.台长;if(_ap&&_ap.创始人)ADMIN_PASSES.创始人=_ap.创始人;if(_ap&&_ap.老师)ADMIN_PASSES.老师=_ap.老师;}catch(_e2){}
+try{var _ap=JSON.parse(localStorage.getItem('wb_admin_passes')||'null');if(_ap&&_ap.台长)ADMIN_PASSES.台长=_ap.台长;if(_ap&&_ap.技术顾问)ADMIN_PASSES.技术顾问=_ap.技术顾问;if(_ap&&_ap.老师)ADMIN_PASSES.老师=_ap.老师;}catch(_e2){}
 /* 当前身份 */
 function currentAdminName(){
 var map={台长:'台长',老师:'余颖','管理员（公用）':'管理员（公用）'};
@@ -1029,18 +1029,18 @@ applyRoleUI();
 navigate(currentPage);
 showToast(role==='admin'?'已切换为管理员模式':'已切换为成员模式');
 };
-/* 技术支持窗口：技术顾问（已毕业创始人学长） + 联系方式 */
+/* 技术支持窗口：技术顾问（已毕业学长） + 联系方式 */
 window.openTechSupport=function(){
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>🔧 技术支持</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
 html+='<div class="modal-body">';
-html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>技术顾问团</strong> · 由已毕业的创始人学长组成，为电视台提供技术支援</div></div>';
-var techs=(DATA.members||[]).filter(function(m){return m.role==='创始人';});
+html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>技术顾问团</strong> · 由已毕业的技术顾问学长组成，为电视台提供技术支援</div></div>';
+var techs=(DATA.members||[]).filter(function(m){return m.role==='技术顾问';});
 if(techs.length===0){
-html+='<div class="empty">技术顾问名单整理中——请台长补充创始人学长资料</div>';
+html+='<div class="empty">技术顾问名单整理中——请台长补充技术顾问学长资料</div>';
 }else{
 techs.forEach(function(t){
-html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:#0f766e">'+initials(t.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(t.name)+'</div><div class="mc-role">创始人 · '+(t.grade?esc(t.grade):'已毕业')+(t.mainSkill?' · '+esc(t.mainSkill):'')+'</div></div><span class="badge st-teal">技术顾问</span></div><div class="mc-info"><span>'+(t.bio?esc(t.bio):'')+'</span><span>'+(t.contact?'联系：'+esc(t.contact):'')+'</span></div></div>';
+html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:#0f766e">'+initials(t.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(t.name)+'</div><div class="mc-role">技术顾问 · '+(t.grade?esc(t.grade):'已毕业')+(t.mainSkill?' · '+esc(t.mainSkill):'')+'</div></div><span class="badge st-teal">技术顾问</span></div><div class="mc-info"><span>'+(t.bio?esc(t.bio):'')+'</span><span>'+(t.contact?'联系：'+esc(t.contact):'')+'</span></div></div>';
 });
 }
 html+='<div class="card card-pad"><div class="font-600 mb-8">使用说明</div><div class="text-sm text-t2" style="line-height:1.8"><div>&middot; 工作台使用问题、系统维护需求可联系技术顾问</div><div>&middot; 顾问为学长公益支持，请礼貌预约时间</div><div>&middot; 紧急问题可直接找台长（陈奕多）</div></div></div>';
@@ -2318,7 +2318,7 @@ html+='</div>';
 if(isAdmin())html+='<button class="btn btn-primary btn-sm" onclick="openAddMember()">'+I.plus+'添加成员</button>';
 html+='</div>';
 /* 成员中心只显示在校学生；老师/已毕业顾问见「外联」 */
-var studentOnly=searchMembers.filter(function(m){return !(m.role==='创始人'||m.role==='指导老师'||m.grade==='老师'||m.class==='已毕业');});
+var studentOnly=searchMembers.filter(function(m){return !(m.role==='技术顾问'||m.role==='指导老师'||m.grade==='老师'||m.class==='已毕业');});
 var teacherRow=searchMembers.filter(function(m){return m.role==='指导老师'||m.grade==='老师';});
 if(teacherRow.length>0&&memberFilter==='all'){
 html+='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="font-600 mb-8">👩‍🏫 指导老师</div>';
@@ -2352,7 +2352,7 @@ return html;
 }
 /* ===== 外联（老师 + 已毕业顾问） ===== */
 function renderExternal(){
-var html='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>外联</strong> · 指导老师与技术顾问（已毕业创始人学长），非在校学生</div></div>';
+var html='<div class="card card-pad mb-12" style="background:var(--primary-l);border-color:rgba(37,99,235,.15)"><div class="text-sm" style="color:var(--primary)"><strong>外联</strong> · 指导老师与技术顾问（已毕业学长），非在校学生</div></div>';
 /* 老师栏 */
 var teachers=DATA.members.filter(function(m){return m.role==='指导老师'||m.grade==='老师';});
 html+='<div class="card card-pad mb-12"><div class="font-600 mb-8">👩‍🏫 指导老师</div>';
@@ -2362,8 +2362,8 @@ html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" 
 });
 html+='</div>';
 /* 技术顾问栏 */
-var advisors=DATA.members.filter(function(m){return m.role==='创始人';});
-html+='<div class="card card-pad"><div class="font-600 mb-8">🔧 技术顾问（已毕业创始人学长）</div>';
+var advisors=DATA.members.filter(function(m){return m.role==='技术顾问';});
+html+='<div class="card card-pad"><div class="font-600 mb-8">🔧 技术顾问（已毕业学长）</div>';
 if(advisors.length===0){html+='<div class="empty">暂无</div>';}
 advisors.forEach(function(t){
 html+='<div class="member-card mb-8"><div class="mc-top"><div class="mc-avatar" style="background:#0f766e">'+initials(t.name)+'</div><div style="flex:1"><div class="mc-name">'+esc(t.name)+'</div><div class="mc-role">'+esc(t.grade||'已毕业')+(t.mainSkill?' · '+esc(t.mainSkill):'')+'</div></div><span class="badge st-teal">技术顾问</span></div><div class="mc-info"><span>'+(t.bio?esc(t.bio):'')+'</span><span>'+(t.contact?'联系：'+esc(t.contact):'')+'</span></div></div>';
