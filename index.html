@@ -197,6 +197,9 @@ svg{flex-shrink:0}
 .pboard-card .pb-progress .progress-bar{flex:1}
 .pboard-card .pb-step{font-size:11px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:4px}
 
+.nav-red-dot{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px var(--surface)}
+.red-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;vertical-align:middle;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 /* ===== Annual Timeline（年度时间轴） ===== */
 .tl-wrap{min-width:1150px;overflow-x:auto}
 .tl-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}
@@ -704,6 +707,7 @@ function mergeData(parsed){
   });
   out.positions=out.positions||[];
   out.checkins=out.checkins||[];
+  out.creatives=(out.creatives||[]).map(function(c){if(c&&c.viewed===undefined)c.viewed=true;return c;});
   out.meetings=out.meetings||[];
   out.annualPlans=out.annualPlans||[];
   out.logs=out.logs||[];
@@ -1155,7 +1159,8 @@ coreIdea:document.getElementById('c-idea').value.trim()||'-',
 target:document.getElementById('c-target').value.trim()||'-',
 refs:parseInt(document.getElementById('c-refs').value,10)||0,
 status:'创意待整理',
-created:created
+created:created,
+viewed:false
 });
 saveData();
 closeModal();
@@ -1642,6 +1647,7 @@ html+='</div>';
 if(!isAdmin()&&ADMIN_PAGES.indexOf(item.id)>=0)return;
 html+='<div class="nav-item" onclick="navigate(\''+item.id+'\')" data-page="'+item.id+'">'+I[item.icon]+'<span>'+item.label+'</span>';
 if(item.phase===2)html+='<span class="phase-tag">P2</span>';
+if(item.id==='creative'&&(DATA.creatives||[]).some(function(c){return c.viewed===false;}))html+='<span class="nav-red-dot"></span>';
 html+='</div>';
 }
 });
@@ -1844,8 +1850,9 @@ return creativeFilter==='all'||c.source===creativeFilter;
 if(filteredCreative.length===0)html+='<div class="empty" style="grid-column:1/-1">暂无创意，点击下方「提交新创意」发起提案</div>';
 filteredCreative.forEach(function(c){
 var srcColor=c.source==='学校立项'?'st-blue':c.source==='自主立项'?'st-teal':'st-indigo';
-html+='<div class="card card-pad" style="cursor:pointer" onclick="openCreative('+c.id+')">';
-html+='<div class="flex justify-between items-center mb-8"><span class="badge '+srcColor+'">'+esc(c.source)+'</span>'+statusBadge(c.status)+'</div>';
+html+='<div class="card card-pad" style="cursor:pointer;position:relative" onclick="openCreative('+c.id+')">';
+html+='<div class="flex justify-between items-center mb-8"><span class="badge '+srcColor+'">'+esc(c.source)+'</span>'+statusBadge(c.status)+(c.viewed===false?'<span class="badge st-danger" style="margin-left:4px">新</span>':'')+'</div>';
+if(c.viewed===false)html+='<span class="red-dot" style="position:absolute;top:12px;right:12px" title="管理员未查看"></span>';
 html+='<div class="font-bold mb-8" style="font-size:15px">'+esc(c.title)+'</div>';
 html+='<div class="text-sm text-t2 mb-8" style="line-height:1.5">'+esc(c.coreIdea)+'</div>';
 html+='<div class="text-sm text-t3 flex items-center gap-12" style="flex-wrap:wrap">';
@@ -2481,6 +2488,7 @@ return html;
 window.openCreative=function(id){
 var c=DATA.creatives.find(function(x){return x.id===id;});
 if(!c)return;
+if(c.viewed===false){c.viewed=true;saveData();renderSidebar();}
 var modal=document.getElementById('modal-content');
 var srcColor=c.source==='学校立项'?'st-blue':c.source==='自主立项'?'st-teal':'st-indigo';
 var html='<div class="modal-header"><h2>'+esc(c.title)+'</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
