@@ -1055,27 +1055,40 @@ return;
 }
 var modal=document.getElementById('modal-content');
 var html='<div class="modal-header"><h2>进入管理员模式</h2><button class="btn-icon" onclick="closeModal()">'+I.close+'</button></div>';
-html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">选择身份</label><select id="role-identity"><option value="管理员（公用）">管理员（公用）</option><option value="台长">台长</option><option value="老师">老师（指导）</option>'+(function(){var fs2=(DATA.members||[]).filter(function(m){return m.role==='创始人';});var o='';if(fs2.length===0)o+='<option value="创始人">创始人（学长）</option>';fs2.forEach(function(f){o+='<option value="'+esc(f.name)+'">创始人 · '+esc(f.name)+'（学长）</option>';});return o;})()+'</select></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">管理员口令</label><input id="role-pass" type="password" placeholder="请输入该身份的口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">请选择身份并输入口令；台长/老师可联系台长获取口令。</div></div>';
+html+='<div class="modal-body"><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">账号</label><input id="role-account" placeholder="如：管理员 / 台长 / 万雨恒" autocomplete="off"></div><div class="form-group mb-12"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">口令</label><input id="role-pass" type="password" placeholder="请输入口令" style="letter-spacing:2px"></div><div class="text-sm text-t2">账号即身份：管理员/台长/老师/创始人姓名；口令请联系台长获取。</div></div>';
 html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="tryAdmin()">进入</button></div>';
 modal.innerHTML=html;
 document.getElementById('modal-overlay').classList.add('show');
 setTimeout(function(){var i=document.getElementById('role-pass');if(i)i.focus();},100);
 };
 window.tryAdmin=function(){
-var idSel=document.getElementById('role-identity');
-var identity=idSel?idSel.value:'台长';
+var accEl=document.getElementById('role-account');
+var account=(accEl?accEl.value.trim():'');
+if(!account){showToast('请输入账号');return;}
 var i=document.getElementById('role-pass');
 var val=i?i.value.trim():'';
-if(!val){showToast('请输入管理员口令');return;}
-var FOUNDER_PASSES={万雨恒:'WANYUHENG',易汉武:'YIHANWU'};
-var needPass=FOUNDER_PASSES[identity]||'ycyz1938';
+if(!val){showToast('请输入口令');return;}
+/* 账号 → 身份 + 口令 */
+var ACC_MAP={
+'管理员':'管理员（公用）','admin':'管理员（公用）',
+'台长':'台长','老师':'老师','余颖':'老师',
+'万雨恒':'万雨恒','WANYUHENG':'万雨恒',
+'易汉武':'易汉武','YIHANWU':'易汉武'
+};
+var PASS_MAP={
+'管理员（公用）':'ycyz1938','台长':'ycyz1938','老师':'ycyz1938',
+'万雨恒':'WANYUHENG','易汉武':'YIHANWU'
+};
+var identity=ACC_MAP[account];
+if(!identity){showToast('账号不存在，请联系台长');return;}
+var needPass=PASS_MAP[identity]||'ycyz1938';
 if(val===needPass){
 adminIdentity=identity;
 try{localStorage.setItem('wb_admin_identity',identity);}catch(_e){}
 closeModal();
 setRole('admin');
-try{logAction('管理员登录','身份「'+identity+'」进入管理员模式');}catch(_e){}
-showToast(identity+'口令正确，已进入管理员模式');
+try{logAction('管理员登录','账号「'+account+'」进入管理员模式');}catch(_e){}
+showToast('欢迎，'+(identity==='管理员（公用）'?'管理员':identity));
 }else{
 showToast('口令错误');
 }
